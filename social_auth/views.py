@@ -1,4 +1,7 @@
+import json
 import logging
+import re
+import urllib
 
 from django.conf import settings
 from django.http import HttpResponseRedirect
@@ -14,31 +17,94 @@ def logout(request):
 	return HttpResponseRedirect('/')
 
 def _get_access_token(request,provider):
-	access_token = (None,None)
 	if 'user' in request.session:
 		user = request.session.get('user')
 		identity = user.get_identity(provider)
-		access_token = (identity.token_key,identity_token_secret)
-	elif '%s_access_token' % provider in request.session:
-		access_token = request.session.get('%s_access_token'%provider)
-	else:
-		return redirect(provider)
-	return access_token
+		if identity:
+			return identity.token
+	
+	if '%s_access_token' % provider in request.session:
+		return request.session.get('%s_access_token'%provider)
+	
+	return redirect(provider)
 
 # Facebook
 
 FACEBOOK_API_KEY    = getattr(settings,'FACEBOOK_API_KEY',None)
 FACEBOOK_API_SECRET = getattr(settings,'FACEBOOK_API_SECRET',None)
 
-def get_facebook_api(request):
+def get_facebook_api(request,graph_type=''):
 	access_token = _get_access_token(request,'facebook')
 
-	#TODO: Need to actually build out api and return it here, see twitter
-	api = None
+	graph_url = 'https://graph.facebook.com/me'
+	if graph_type:
+		graph_url += '/%s' % graph
+	graph_url += '?'
+
+	graph_dict = {'access_token' : access_token}
+	if not graph_type:
+		graph_dict.update({'fields':'id,name,picture'})
+	
+	graph_url += urllib.urlencode(graph_dict)
+	api = json.loads(urllib.urlopen(graph_url).read())
 	return api 
 
 def facebook(request):
-	pass
+	
+	if 'user' in request.session:
+		user = request.session['user']
+		identity = user.get_identity('facebook')
+		if identity:
+			return HttpResponseRedirect('/')
+    
+	# TODO: Add a way to manage error responses
+	# error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
+	if 'error' in request.GET:
+		logging.warning(request, 'Could not authorize on Facebook!')
+		return HttpResponseRedirect('/')
+
+	if 'code' in request.GET:
+		code = request.GET.get('code')
+		callback_url = request.build_absolute_uri()
+
+		values = {'client_id' : FACEBOOK_API_KEY,
+			'redirect_uri' : 'http://%s%s' % (request.get_host(), request.path),
+			'client_secret' : FACEBOOK_API_SECRET,
+			'code' : code,
+			'scope': 'publish_stream'}
+		access_url = "https://graph.facebook.com/oauth/access_token"
+		redirect_url = "%s?%s" % (access_url,urllib.urlencode(values))
+		result = urllib.urlopen(redirect_url).read() 
+
+		access_token = re.findall('^access_token=([^&]*)', result)[0]
+		request.session['facebook_access_token'] = access_token
+		
+		facebook_user = get_facebook_api(request)
+
+		user_info = {
+			'token' : request.session['facebook_access_token'],
+			'name'  : facebook_user['name'],
+			'pic'   : facebook_user['picture'],
+			'data'  : facebook_user,
+			}
+
+		user = None
+		if 'user' in request.session:
+			user = request.session['user']
+		request.session['user'] = SocialUser.lookup('facebook',user,user_info)
+		
+		return HttpResponseRedirect('/') 
+
+	callback_url = request.build_absolute_uri()
+	values = {'client_id' : FACEBOOK_API_KEY,
+              'redirect_uri' : 'http://%s%s' % (request.get_host(), request.path),
+              'scope': 'publish_stream'}
+
+	
+	authorize_url = "https://graph.facebook.com/oauth/authorize"
+	redirect_url  = "%s?%s" %(authorize_url,urllib.urlencode(values))
+
+	return HttpResponseRedirect(redirect_url)
 
 # Twitter
 
@@ -55,7 +121,10 @@ def get_twitter_api(request):
 def twitter(request):
 
 	if 'user' in request.session:
-		return HttpResponseRedirect('/')
+		user = request.session['user']
+		identity = user.get_identity('twitter')
+		if identity:
+			return HttpResponseRedirect('/')
 
 	if 'oauth_verifier' in request.GET:
 		auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
@@ -72,13 +141,16 @@ def twitter(request):
 		
 		twitter_user = get_twitter_api(request).me()
 		user_info = {
-			'token_key'    : access_token.key,
-			'token_secret' : access_token.secret,
-			'name'         : twitter_user.screen_name,
-			'pic'          : twitter_user.profile_image_url,
-			'data'         : twitter_user.__dict__,
+			'token' : request.session['twitter_access_token'],
+			'name'  : twitter_user.screen_name,
+			'pic'   : twitter_user.profile_image_url,
+			'data'  : twitter_user.__dict__,
 			}
-		request.session['user'] = SocialUser.lookup('twitter',user_info)
+		
+		user = None
+		if 'user' in request.session:
+			user = request.session['user']
+		request.session['user'] = SocialUser.lookup('twitter',user,user_info)
 
 		return HttpResponseRedirect('/') 
 	
