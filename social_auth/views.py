@@ -82,10 +82,10 @@ def facebook(request):
 		facebook_user = get_facebook_api(request)
 
 		user_info = {
-			'token' : request.session['facebook_access_token'],
-			'name'  : facebook_user['name'],
-			'pic'   : facebook_user['picture'],
-			'data'  : facebook_user,
+			'token'     : request.session['facebook_access_token'],
+			'name'      : facebook_user['name'],
+			'image_url' : facebook_user['picture'],
+			'data'      : facebook_user,
 			}
 
 		user = None
@@ -141,10 +141,10 @@ def twitter(request):
 		
 		twitter_user = get_twitter_api(request).me()
 		user_info = {
-			'token' : request.session['twitter_access_token'],
-			'name'  : twitter_user.screen_name,
-			'pic'   : twitter_user.profile_image_url,
-			'data'  : twitter_user.__dict__,
+			'token'     : request.session['twitter_access_token'],
+			'name'      : twitter_user.screen_name,
+			'image_url' : twitter_user.profile_image_url,
+			'data'      : twitter_user.__dict__,
 			}
 		
 		user = None

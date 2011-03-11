@@ -6,20 +6,21 @@ PROVIDER_CHOICES = (
 )
 
 class IdentityProvider(models.Model):
-	user     = models.ForeignKey('social_auth.SocialUser',blank=True,null=True)
+	user      = models.ForeignKey('social_auth.SocialUser',blank=True,null=True)
 	
-	provider = models.CharField(max_length=10,choices=PROVIDER_CHOICES)
-	token    = models.CharField(max_length=200)
+	provider  = models.CharField(max_length=10,choices=PROVIDER_CHOICES)
+	token     = models.CharField(max_length=200)
 	
-	pic      = models.CharField(max_length=200,blank=True)
-	name     = models.CharField(max_length=200,blank=True)
-	data     = models.TextField(max_length=200,blank=True)
+	name      = models.CharField(max_length=200,blank=True)
+	image_url = models.CharField(max_length=200,blank=True)
+	data      = models.TextField(max_length=200,blank=True)
 	
 	def __unicode__(self):
 		return '%s - %s' % (self.user,self.provider)
 
 class SocialUser(models.Model):
-	username = models.CharField(max_length=200)
+	username  = models.CharField(max_length=200)
+	image_url = models.CharField(max_length=200)
 
 	def __unicode__(self):
 		return self.username
@@ -28,16 +29,6 @@ class SocialUser(models.Model):
 		for identity in self.identityprovider_set.all():
 			if identity.provider == provider: return identity
 		return None
-
-	@property
-	def name(self):
-		for identity in self.identityprovider_set.all():
-			if identity.name: return identity.name
-	
-	@property
-	def pic(self):
-		for identity in self.identityprovider_set.all():
-			if identity.pic: return identity.pic
 
 	@staticmethod
 	def lookup(provider,user,info):
@@ -50,17 +41,22 @@ class SocialUser(models.Model):
 
 		if created:
 			if not user:
-				user = SocialUser(username=identity.name)
+				user = SocialUser(
+						username  = identity.name,
+						image_url = identity.image_url,)
 				user.save()
 			identity.user = user
 			identity.save()
 		else:
-			identity.name = info['name']
-			identity.pic  = info['pic']
-			identity.data = info['data']
+			identity.name       = info['name']
+			identity.image_url  = info['image_url']
+			identity.data       = info['data']
 			user = identity.user
 			if not user.username:
 				user.username = identity.name
+				user.save()
+			if not user.image_url:
+				user.image_url = identity.image_url
 				user.save()
 		
 		return user
