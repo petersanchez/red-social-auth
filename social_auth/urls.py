@@ -1,0 +1,8 @@
+from django.conf.urls.defaults import *
+
+urlpatterns = patterns('social_auth.views',
+    url(r'^facebook/$', 'facebook', name='auth_facebook'),
+    url(r'^twitter/$',  'twitter',  name='auth_twitter'),
+    url(r'^logout/$',   'logout',   name='auth_logout'),
+)
+
