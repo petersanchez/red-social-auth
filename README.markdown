@@ -1,10 +1,8 @@
-RED Social Auth
-===============
+# RED Social Auth
 
 This is a django app that adds Facebook and Twitter users to your project.
 
-Setup
-=====
+## Setup
 
 1. The first step is to add your keys to the settings.py file::
 
@@ -22,8 +20,7 @@ Setup
 4. Run 'python manage.py syncdb' on your project and you're done!
 
 
-Usage
-=====
+## Usage
 
 This app is very easy to use.  Your login urls are::
 
@@ -36,8 +33,7 @@ will return to the home page.  To log out they need to visit::
     /auth/logout/
 
 
-Models
-======
+## Models
 
 There are two models: SocialUser and IdentityProvider.  The first contains
 a username and image_url for the user on your site.  The second model
