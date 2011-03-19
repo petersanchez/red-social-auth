@@ -15,7 +15,7 @@ This is a django app that adds Facebook and Twitter users to your project.
 
 3. Add the following line to your urls.py files::
 
-    (r'^auth/', include('social_auth.urls')),
+    (r'&#94;auth/', include('social_auth.urls')),
 
 4. Run 'python manage.py syncdb' on your project and you're done!
 
