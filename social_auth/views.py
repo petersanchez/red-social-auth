@@ -21,7 +21,7 @@ def _get_access_token(request,provider):
 		user = request.session.get('user')
 		identity = user.get_identity(provider)
 		if identity:
-			return identity.token
+			return json.loads(identity.token)
 	
 	if '%s_access_token' % provider in request.session:
 		return request.session.get('%s_access_token'%provider)
@@ -141,7 +141,7 @@ def twitter(request):
 		
 		twitter_user = get_twitter_api(request).me()
 		user_info = {
-			'token'     : request.session['twitter_access_token'],
+			'token'     : json.dumps(request.session['twitter_access_token']),
 			'name'      : twitter_user.screen_name,
 			'image_url' : twitter_user.profile_image_url,
 			'data'      : twitter_user.__dict__,
