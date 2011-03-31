@@ -12,7 +12,7 @@ setup(
 	license      = 'MIT license',
 	description  = """ A django app to add social authentication with Facebook and Twitter """,
 
-	long_description = open('README.rst').read(),
+	long_description = open('README.markdown').read(),
 	install_requires = ['tweepy',],
 
 	classifiers  = (
