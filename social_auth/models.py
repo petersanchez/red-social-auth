@@ -6,14 +6,13 @@ PROVIDER_CHOICES = (
 )
 
 class IdentityProvider(models.Model):
-	user      = models.ForeignKey('social_auth.SocialUser',blank=True,null=True)
-	
-	provider  = models.CharField(max_length=10,choices=PROVIDER_CHOICES)
-	token     = models.CharField(max_length=200)
-	
-	name      = models.CharField(max_length=200,blank=True)
-	image_url = models.CharField(max_length=200,blank=True)
-	data      = models.TextField(max_length=200,blank=True)
+	user             = models.ForeignKey('social_auth.SocialUser', blank=True, null=True)
+	provider         = models.CharField(max_length=10,choices=PROVIDER_CHOICES)
+	token            = models.CharField(max_length=200)
+	external_user_id = models.CharField(max_length=200,blank=True)
+	name             = models.CharField(max_length=200,blank=True)
+	image_url        = models.CharField(max_length=200,blank=True)
+	data             = models.TextField(max_length=200,blank=True)
 	
 	def __unicode__(self):
 		return '%s - %s' % (self.user,self.provider)
@@ -25,10 +24,11 @@ class SocialUser(models.Model):
 	def __unicode__(self):
 		return self.username
 
-	def get_identity(self,provider):
-		for identity in self.identityprovider_set.all():
-			if identity.provider == provider: return identity
-		return None
+	def get_identity(self, provider):
+		try: 
+			return self.identityprovider_set.filter(provider=provider)[0]
+		except: 
+			return None
 
 	@staticmethod
 	def lookup(provider,user,info):
@@ -43,7 +43,7 @@ class SocialUser(models.Model):
 			if not user:
 				user = SocialUser(
 						username  = identity.name,
-						image_url = identity.image_url,)
+						image_url = identity.image_url)
 				user.save()
 			identity.user = user
 			identity.save()
