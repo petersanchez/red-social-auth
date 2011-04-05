@@ -7,6 +7,11 @@ from social_auth.models import SocialUser, IdentityProvider
 
 import tweepy
 
+FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
+FACEBOOK_API_SECRET = getattr(settings, 'FACEBOOK_API_SECRET', None)
+TWITTER_API_KEY     = getattr(settings, 'TWITTER_API_KEY', None)
+TWITTER_API_SECRET  = getattr(settings, 'TWITTER_API_SECRET', None)
+
 def logout(request):
 	if 'user' in request.session: del request.session['user']
 	return HttpResponseRedirect('/')
@@ -16,9 +21,7 @@ def _get_access_token(request, provider):
 		user = request.session.get('user')
 		identity = user.get_identity(provider)
 		if identity:
-			if provider == 'twitter':
-				return json.loads(identity.token)
-			return identity.token
+			return json.loads(identity.token)
 	
 	if '%s_access_token' % provider in request.session:
 		return request.session.get('%s_access_token' % provider)
@@ -26,15 +29,12 @@ def _get_access_token(request, provider):
 	return redirect(provider)
 
 # Facebook
-FACEBOOK_API_KEY    = getattr(settings,'FACEBOOK_API_KEY',None)
-FACEBOOK_API_SECRET = getattr(settings,'FACEBOOK_API_SECRET',None)
 
 def call_facebook_api(request, method=None, **kwargs):
 	graph_dict = {'access_token' : _get_access_token(request, 'facebook')}
 	graph_dict.update(kwargs)
 	data = urllib.urlencode(graph_dict)
-	url = 'https://graph.facebook.com/%s' % method
-
+	url  = 'https://graph.facebook.com/%s' % method
 	if method !='me': 
 		return json.loads(urllib.urlopen(url, data).read())
 	else:
@@ -45,9 +45,11 @@ def facebook(request):
 	access_url    = "https://graph.facebook.com/oauth/access_token"
 	authorize_url = "https://graph.facebook.com/oauth/authorize"
 	callback_url  = request.build_absolute_uri()
-	values = {'client_id':    FACEBOOK_API_KEY,
-              'redirect_uri': 'http://%s%s' % (request.get_host(), request.path),
-              'scope':        'publish_stream'}
+	values        = {
+		'client_id'    : FACEBOOK_API_KEY,
+  		'redirect_uri' : 'http://%s%s' % (request.get_host(), request.path),
+		'scope'        : 'publish_stream'
+		}
 	
 	if 'user' in request.session:
 		user     = request.session['user']
@@ -63,14 +65,14 @@ def facebook(request):
 	if 'code' in request.GET:
 		values['code']          = request.GET.get('code')
 		values['client_secret'] = FACEBOOK_API_SECRET
-		redirect_url = "%s?%s" % (access_url,urllib.urlencode(values))
+		redirect_url = "%s?%s" % (access_url, urllib.urlencode(values))
 		result       = urllib.urlopen(redirect_url).read() 
 		access_token = re.findall('^access_token=([^&]*)', result)[0]
 		request.session['facebook_access_token'] = access_token
 		
 		facebook_user = call_facebook_api(request, 'me', **{'fields':'id,name,picture'})
 		user_info     = {
-			'token'            : request.session['facebook_access_token'],
+			'token'            : json.dumps(request.session['facebook_access_token']),
 			'external_user_id' : facebook_user['id'],
 			'name'             : facebook_user['name'],
 			'image_url'        : facebook_user['picture'],
@@ -86,8 +88,6 @@ def facebook(request):
 	return HttpResponseRedirect(redirect_url)
 
 # Twitter
-TWITTER_API_KEY    = getattr(settings,'TWITTER_API_KEY',None)
-TWITTER_API_SECRET = getattr(settings,'TWITTER_API_SECRET',None)
 
 def get_twitter_api(request):
 	access_token = _get_access_token(request,'twitter')
