@@ -13,14 +13,13 @@ class IdentityProvider(models.Model):
 	name             = models.CharField(max_length=200,blank=True)
 	image_url        = models.CharField(max_length=200,blank=True)
 	data             = models.TextField(max_length=200,blank=True)
-	
 	def __unicode__(self):
 		return '%s - %s' % (self.user,self.provider)
 
 class SocialUser(models.Model):
 	username  = models.CharField(max_length=200)
 	image_url = models.CharField(max_length=200)
-
+	created   = models.DateTimeField(auto_now_add=True, db_index=True)
 	def __unicode__(self):
 		return self.username
 
@@ -37,7 +36,7 @@ class SocialUser(models.Model):
 		identity,created = IdentityProvider.objects.get_or_create(
 						provider = provider,
 						token    = info['token'],
-						defaults=info)
+						defaults = info)
 
 		if created:
 			if not user:
@@ -48,15 +47,15 @@ class SocialUser(models.Model):
 			identity.user = user
 			identity.save()
 		else:
-			identity.name       = info['name']
-			identity.image_url  = info['image_url']
-			identity.data       = info['data']
+			#identity.name       = info['name']
+			#identity.image_url  = info['image_url']
+			#identity.data       = info['data']
 			user = identity.user
 			if not user.username:
-				user.username = identity.name
+				user.username = info['name']
 				user.save()
 			if not user.image_url:
-				user.image_url = identity.image_url
+				user.image_url = info['image_url']
 				user.save()
 		
 		return user
