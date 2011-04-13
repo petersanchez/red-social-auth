@@ -14,6 +14,10 @@ TWITTER_API_SECRET  = getattr(settings, 'TWITTER_API_SECRET', None)
 
 def logout(request):
 	if 'user' in request.session: del request.session['user']
+	if 'twitter_access_token' in request.session:
+		del request.session['twitter_access_token']
+	if 'facebook_access_token' in request.session:
+		del request.session['facebook_access_token']
 	return HttpResponseRedirect('/')
 
 def _get_access_token(request, provider):
