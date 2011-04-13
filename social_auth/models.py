@@ -24,32 +24,16 @@ class SocialUser(models.Model):
 		return self.username
 
 	def get_identity(self, provider):
-		try: 
-			return self.identityprovider_set.filter(provider=provider)[0]
-		except: 
-			return None
+			identity = self.identityprovider_set.filter(provider=provider)[:1]
+			return identity and identity[0] or None
 
 	@staticmethod
-	def lookup(provider,user,info):
+	def lookup(provider, user, info):
 		""" A method to get or create an identity provider for a user """
 
-		identity,created = IdentityProvider.objects.get_or_create(
-						provider = provider,
-						token    = info['token'],
-						defaults = info)
-
-		if created:
-			if not user:
-				user = SocialUser(
-						username  = identity.name,
-						image_url = identity.image_url)
-				user.save()
-			identity.user = user
-			identity.save()
-		else:
-			#identity.name       = info['name']
-			#identity.image_url  = info['image_url']
-			#identity.data       = info['data']
+		try:
+			identity = IdentityProvider.objects.get(provider = provider,
+												external_user_id = info['external_user_id'])
 			user = identity.user
 			if not user.username:
 				user.username = info['name']
@@ -57,6 +41,23 @@ class SocialUser(models.Model):
 			if not user.image_url:
 				user.image_url = info['image_url']
 				user.save()
-		
+
+		except IdentityProvider.DoesNotExist:
+			identity = IdentityProvider(
+							provider         = provider, 
+							token            = info['token'],
+							external_user_id = info['external_user_id'],
+							name             = info['name'],
+							image_url        = info['image_url'],
+							data             = info['data']
+							)
+			identity.save()
+			if not user:
+				user = SocialUser(
+						username  = identity.name,
+						image_url = identity.image_url)
+				user.save()
+			identity.user = user
+			identity.save()
 		return user
 
