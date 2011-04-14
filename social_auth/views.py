@@ -3,9 +3,10 @@ import json, logging, re, urllib
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
-from social_auth.models import SocialUser, IdentityProvider
 
 import tweepy
+
+from social_auth.models import SocialUser, IdentityProvider
 
 FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
 FACEBOOK_API_SECRET = getattr(settings, 'FACEBOOK_API_SECRET', None)
