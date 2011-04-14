@@ -1,8 +1,10 @@
 import json, logging, re, urllib
 
+from django.core import serializers
 from django.conf import settings
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
+from django.views.decorators.cache import never_cache
 
 import tweepy
 
@@ -16,6 +18,13 @@ TWITTER_API_SECRET  = getattr(settings, 'TWITTER_API_SECRET', None)
 def logout(request):
 	request.session.flush()
 	return HttpResponseRedirect('/')
+
+@never_cache
+def status(request):
+	user = request.session.get('user',None)
+	if user:
+		return HttpResponse(serializers.serialize('json',[user]))
+	return HttpResponse(json.dumps([]))
 
 def _get_access_token(request, provider):
 	if 'user' in request.session:
