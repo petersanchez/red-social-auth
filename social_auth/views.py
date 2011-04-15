@@ -1,6 +1,5 @@
 import json, logging, re, urllib
 
-from django.core import serializers
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
