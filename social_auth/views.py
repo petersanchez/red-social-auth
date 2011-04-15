@@ -22,9 +22,15 @@ def logout(request):
 @never_cache
 def status(request):
 	user = request.session.get('user',None)
+	obj = None
 	if user:
-		return HttpResponse(serializers.serialize('json',[user]))
-	return HttpResponse(json.dumps([]))
+		obj = {
+				'pk'        : user.id,
+				'username'  : user.username,
+				'image_url' : user.image_url,
+				'created'   : user.created.strftime('%Y-%m-%d %H-%M-%S'),
+				}
+	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
 
 def _get_access_token(request, provider):
 	if 'user' in request.session:
