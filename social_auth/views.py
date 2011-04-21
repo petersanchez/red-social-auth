@@ -28,7 +28,15 @@ def status(request):
 				'username'  : user.username,
 				'image_url' : user.image_url,
 				'created'   : user.created.strftime('%Y-%m-%d %H-%M-%S'),
+				'identities': {},
 				}
+		for identity in user.identityprovider_set.all():
+			obj['identities'][identity.provider] = {
+					'name'             : identity.name,
+					'image_url'        : identity.image_url,
+					'external_user_id' : identity.external_user_id,
+					}
+
 	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
 
 def _get_access_token(request, provider):
