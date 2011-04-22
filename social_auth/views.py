@@ -36,6 +36,7 @@ def status(request):
 					'image_url'        : identity.image_url,
 					'external_user_id' : identity.external_user_id,
 					}
+		if obj['identities'] == {}: obj['identities'] = None
 
 	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
 
