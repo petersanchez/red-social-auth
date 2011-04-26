@@ -66,6 +66,11 @@ def call_facebook_api(request, method=None, **kwargs):
 		return json.loads(urllib.urlopen(url).read())
 
 def facebook(request):
+	
+	redirect_url = '/'
+	if 'next' in request.GET:
+		redirect_url = request.GET['next']
+
 	access_url    = "https://graph.facebook.com/oauth/access_token"
 	authorize_url = "https://graph.facebook.com/oauth/authorize"
 	callback_url  = request.build_absolute_uri()
@@ -78,13 +83,13 @@ def facebook(request):
 	if 'user' in request.session:
 		user     = request.session['user']
 		identity = user.get_identity('facebook')
-		if identity: return HttpResponseRedirect('/')
+		if identity: return HttpResponseRedirect(redirect_url)
     
 	# TODO: Add a way to manage error responses
 	# error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
 	if 'error' in request.GET:
 		logging.warning(request, 'Could not authorize on Facebook!')
-		return HttpResponseRedirect('/')
+		return HttpResponseRedirect(redirect_url)
 
 	if 'code' in request.GET:
 		values['code']          = request.GET.get('code')
@@ -107,7 +112,7 @@ def facebook(request):
 		if 'user' in request.session:
 			user = request.session['user']
 		request.session['user'] = SocialUser.lookup('facebook', user, user_info)
-		return HttpResponseRedirect('/') 
+		return HttpResponseRedirect(redirect_url) 
 	redirect_url  = "%s?%s" % (authorize_url, urllib.urlencode(values))
 	return HttpResponseRedirect(redirect_url)
 
@@ -121,11 +126,14 @@ def get_twitter_api(request):
 
 def twitter(request):
 
+	redirect_url = '/'
+	if 'next' in request.GET:
+		redirect_url = request.GET['next']
+
 	if 'user' in request.session:
 		user = request.session['user']
 		identity = user.get_identity('twitter')
-		if identity:
-			return HttpResponseRedirect('/')
+		if identity: return HttpResponseRedirect(redirect_url)
 
 	if 'oauth_verifier' in request.GET:
 		auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
@@ -154,10 +162,10 @@ def twitter(request):
 			user = request.session['user']
 		request.session['user'] = SocialUser.lookup('twitter', user, user_info)
 
-		return HttpResponseRedirect('/') 
+		return HttpResponseRedirect(redirect_url) 
 	
-	callback_url = request.build_absolute_uri()
 	# Authenticate with Twitter and get redirect_url
+	callback_url = request.build_absolute_uri()
 	auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET, callback_url)
 	try:
 		redirect_url = auth.get_authorization_url()
