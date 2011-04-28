@@ -32,6 +32,20 @@ will return to the home page.  To log out they need to visit:
 
     /auth/logout/
 
+If for some reason you need to have an additional login method to either
+facebook or twitter on your site you can still use red-social-auth to 
+log in.  An example of this might be if you have flash or some native
+app on your website that obfuscates the redirect but still returns the 
+access token.  The trick is to post the identity provider information to the
+following url:
+
+    /auth/submit/
+
+It is required that you post both the 'provider' (ie 'twitter' or 'facebook')
+and the access 'token' here.  Additionally you can post the 'external_user_id',
+'name', 'image_url', and any 'data' (as long as it's in json format).  When
+the post is successful it will either find and login the user or create a new
+user with the identity provider information.
 
 ## Models
 
