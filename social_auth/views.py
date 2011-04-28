@@ -1,7 +1,7 @@
 import json, logging, re, urllib
 
 from django.conf import settings
-from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.views.decorators.cache import never_cache
 
