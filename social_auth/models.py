@@ -32,8 +32,9 @@ class SocialUser(models.Model):
 		""" A method to get or create an identity provider for a user """
 
 		try:
-			identity = IdentityProvider.objects.get(provider = provider,
-												external_user_id = info['external_user_id'])
+			identity = IdentityProvider.objects.get(
+							provider = provider,
+							external_user_id = info['external_user_id'])
 			user = identity.user
 			if not user.username:
 				user.username = info['name']

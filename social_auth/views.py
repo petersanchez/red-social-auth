@@ -1,12 +1,13 @@
 import json, logging, re, urllib
 
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.views.decorators.cache import never_cache
 
 import tweepy
 
+from social_auth.forms  import IdentityProviderForm
 from social_auth.models import SocialUser, IdentityProvider
 
 FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
@@ -40,6 +41,26 @@ def status(request):
 
 	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
 
+def submit(request):
+	if request.POST:
+		form = IdentityProviderForm(request)
+		if form.is_valid():
+			provider = form.cleaned_data['provider']
+			user_info     = {
+				'token'            : form.cleaned_data['token'],
+				'external_user_id' : form.cleaned_data['external_user_id'],
+				'name'             : form.cleaned_data['name'],
+				'image_url'        : form.cleaned_data['image_url'],
+				'data'             : form.cleaned_data['data'],
+				}
+			user = None
+			if 'user' in request.session:
+				user = request.session['user']
+			request.session['user'] = SocialUser.lookup(provider, user, user_info)
+			return redirect('auth_status')
+	
+	return HttpResponse(json.dumps({'error':'post request invalid'}),mimetype="application/json")
+
 def _get_access_token(request, provider):
 	if 'user' in request.session:
 		user = request.session.get('user')
@@ -50,7 +71,7 @@ def _get_access_token(request, provider):
 	if '%s_access_token' % provider in request.session:
 		return request.session.get('%s_access_token' % provider)
 	
-	return redirect(provider)
+	return redirect('auth_%s' % provider)
 
 # Facebook
 
