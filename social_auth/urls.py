@@ -1,5 +1,4 @@
 from django.conf.urls.defaults import *
-from django.conf import settings
 
 urlpatterns = patterns('social_auth.views',
 	url(r'^facebook/$', 'facebook', name='auth_facebook'),
