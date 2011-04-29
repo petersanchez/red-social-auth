@@ -164,25 +164,26 @@ def twitter(request):
 		auth.set_request_token(token[0], token[1])
 		try:
 			access_token = auth.get_access_token(request.GET.get('oauth_verifier'))
+			# And now let's store it in the session!
+			request.session['twitter_access_token'] = (access_token.key, access_token.secret)
+			
+			twitter_user = get_twitter_api(request).me()
+			user_info = {
+				'token'            : json.dumps(request.session['twitter_access_token']),
+				'external_user_id' : twitter_user.id,
+				'name'             : twitter_user.screen_name,
+				'image_url'        : twitter_user.profile_image_url,
+				'data'             : twitter_user.__dict__,
+				}
+			
+			user = None
+			if 'user' in request.session:
+				user = request.session['user']
+			request.session['user'] = SocialUser.lookup('twitter', user, user_info)
+
 		except tweepy.TweepError:
 			logging.warning('Error! Failed to get twitter request token.')
-		# And now let's store it in the session!
-		request.session['twitter_access_token'] = (access_token.key, access_token.secret)
-		
-		twitter_user = get_twitter_api(request).me()
-		user_info = {
-			'token'            : json.dumps(request.session['twitter_access_token']),
-			'external_user_id' : twitter_user.id,
-			'name'             : twitter_user.screen_name,
-			'image_url'        : twitter_user.profile_image_url,
-			'data'             : twitter_user.__dict__,
-			}
-		
-		user = None
-		if 'user' in request.session:
-			user = request.session['user']
-		request.session['user'] = SocialUser.lookup('twitter', user, user_info)
-
+			
 		return HttpResponseRedirect(redirect_url) 
 	
 	# Authenticate with Twitter and get redirect_url
