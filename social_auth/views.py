@@ -91,6 +91,9 @@ def facebook(request):
 	redirect_url = '/'
 	if 'next' in request.GET:
 		redirect_url = request.GET['next']
+		request.session['next'] = redirect_url
+	elif 'next' in request.session:
+		redirect_url = request.session['next']
 
 	access_url    = "https://graph.facebook.com/oauth/access_token"
 	authorize_url = "https://graph.facebook.com/oauth/authorize"
@@ -115,8 +118,8 @@ def facebook(request):
 	if 'code' in request.GET:
 		values['code']          = request.GET.get('code')
 		values['client_secret'] = FACEBOOK_API_SECRET
-		redirect_url = "%s?%s" % (access_url, urllib.urlencode(values))
-		result       = urllib.urlopen(redirect_url).read() 
+		facebook_url = "%s?%s" % (access_url, urllib.urlencode(values))
+		result       = urllib.urlopen(facebook_url).read()
 		access_token = re.findall('^access_token=([^&]*)', result)[0]
 		request.session['facebook_access_token'] = access_token
 		
@@ -150,6 +153,9 @@ def twitter(request):
 	redirect_url = '/'
 	if 'next' in request.GET:
 		redirect_url = request.GET['next']
+		request.session['next'] = redirect_url
+	elif 'next' in request.session:
+		redirect_url = request.session['next']
 
 	if 'user' in request.session:
 		user = request.session['user']
