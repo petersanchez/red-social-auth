@@ -19,6 +19,7 @@ class IdentityProvider(models.Model):
 class SocialUser(models.Model):
 	username  = models.CharField(max_length=200)
 	image_url = models.CharField(max_length=200)
+	banned    = models.BooleanField(default=False)
 	created   = models.DateTimeField(auto_now_add=True, db_index=True)
 	def __unicode__(self):
 		return self.username

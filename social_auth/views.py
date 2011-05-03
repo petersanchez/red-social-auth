@@ -29,6 +29,7 @@ def status(request):
 				'username'  : user.username,
 				'image_url' : user.image_url,
 				'created'   : user.created.strftime('%Y-%m-%d %H-%M-%S'),
+				'banned'    : user.banned,
 				'identities': {},
 				}
 		for identity in user.identityprovider_set.all():

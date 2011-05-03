@@ -12,9 +12,9 @@ class IdentityProviderInline(admin.TabularInline):
 	extra = 0
 
 class SocialUserAdmin(admin.ModelAdmin): 
-	list_display  = ('username', user_image, 'created')
+	list_display  = ('username', user_image, 'banned', 'created')
 	search_fields = ['username',]
-	list_filter   = ['created',]
+	list_filter   = ['created','banned']
 	inlines = [IdentityProviderInline,]
 
 admin.site.register(SocialUser,SocialUserAdmin)
