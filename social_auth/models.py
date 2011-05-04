@@ -8,7 +8,7 @@ PROVIDER_CHOICES = (
 class IdentityProvider(models.Model):
 	user             = models.ForeignKey('social_auth.SocialUser', blank=True, null=True)
 	provider         = models.CharField(max_length=10,choices=PROVIDER_CHOICES)
-	token            = models.CharField(max_length=200)
+	token            = models.CharField(max_length=200,blank=True)
 	external_user_id = models.CharField(max_length=200,blank=True)
 	name             = models.CharField(max_length=200,blank=True)
 	image_url        = models.CharField(max_length=200,blank=True)

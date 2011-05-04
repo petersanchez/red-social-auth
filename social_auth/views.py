@@ -16,8 +16,15 @@ TWITTER_API_KEY     = getattr(settings, 'TWITTER_API_KEY', None)
 TWITTER_API_SECRET  = getattr(settings, 'TWITTER_API_SECRET', None)
 
 def logout(request):
+	redirect_url = '/'
+	if 'next' in request.GET:
+		redirect_url = request.GET['next']
+		request.session['next'] = redirect_url
+	elif 'next' in request.session:
+		redirect_url = request.session['next']
+
 	request.session.flush()
-	return HttpResponseRedirect('/')
+	return HttpResponseRedirect(redirect_url)
 
 @never_cache
 def status(request):
@@ -82,10 +89,16 @@ def call_facebook_api(request, method=None, **kwargs):
 	data = urllib.urlencode(graph_dict)
 	url  = 'https://graph.facebook.com/%s' % method
 	if method !='me': 
-		return json.loads(urllib.urlopen(url, data).read())
+		response = json.loads(urllib.urlopen(url, data).read())
 	else:
 		url += '?%s' % data
-		return json.loads(urllib.urlopen(url).read())
+		response = json.loads(urllib.urlopen(url).read())
+	if 'error' in response:
+		user = request.session['user']
+		identity = user.get_identity('facebook')
+		identity.token = ''
+		identity.save()
+	return response
 
 def facebook(request):
 	
