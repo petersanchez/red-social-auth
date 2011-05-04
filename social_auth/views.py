@@ -93,11 +93,6 @@ def call_facebook_api(request, method=None, **kwargs):
 	else:
 		url += '?%s' % data
 		response = json.loads(urllib.urlopen(url).read())
-	if 'error' in response:
-		user = request.session['user']
-		identity = user.get_identity('facebook')
-		identity.token = ''
-		identity.save()
 	return response
 
 def facebook(request):
