@@ -37,16 +37,11 @@ def status(request):
 				'image_url' : user.image_url,
 				'created'   : user.created.strftime('%Y-%m-%d %H-%M-%S'),
 				'banned'    : user.banned,
-				'identities': {},
+				'identities': {
+					'twitter':  hasattr(user,'twitter')  and user.twitter  or None,
+					'facebook': hasattr(user,'facebook') and user.facebook or None,
+					},
 				}
-		for identity in user.identityprovider_set.all():
-			obj['identities'][identity.provider] = {
-					'name'             : identity.name,
-					'image_url'        : identity.image_url,
-					'external_user_id' : identity.external_user_id,
-					}
-		if obj['identities'] == {}: obj['identities'] = None
-
 	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
 
 def submit(request):
@@ -144,7 +139,13 @@ def facebook(request):
 		user = None
 		if 'user' in request.session:
 			user = request.session['user']
-		request.session['user'] = SocialUser.lookup('facebook', user, user_info)
+		s_user = SocialUser.lookup('facebook', user, user_info)
+		s_user.facebook = {
+					'name'             : user_info['name'],
+					'image_url'        : user_info['image_url'],
+					'external_user_id' : user_info['external_user_id'],
+				}
+		request.session['user'] = s_user
 		return HttpResponseRedirect(redirect_url) 
 	redirect_url  = "%s?%s" % (authorize_url, urllib.urlencode(values))
 	return HttpResponseRedirect(redirect_url)
@@ -194,8 +195,13 @@ def twitter(request):
 			user = None
 			if 'user' in request.session:
 				user = request.session['user']
-			request.session['user'] = SocialUser.lookup('twitter', user, user_info)
-
+			s_user = SocialUser.lookup('twitter', user, user_info)
+			s_user.twitter = {
+					'name'             : user_info['name'],
+					'image_url'        : user_info['image_url'],
+					'external_user_id' : user_info['external_user_id'],
+				}
+			request.session['user'] = s_user
 		except tweepy.TweepError:
 			logging.warning('Error! Failed to get twitter request token.')
 			
