@@ -1,4 +1,5 @@
 from django.db import models
+import datetime
 
 PROVIDER_CHOICES = (
 	('facebook','facebook'),
@@ -12,9 +13,14 @@ class IdentityProvider(models.Model):
 	external_user_id = models.CharField(max_length=200,blank=True)
 	name             = models.CharField(max_length=200,blank=True)
 	image_url        = models.CharField(max_length=200,blank=True)
+	expires          = models.IntegerField(blank=True, null=True)
 	data             = models.TextField(max_length=200,blank=True)
+	modified         = models.DateTimeField(auto_now=True, db_index=True)
 	def __unicode__(self):
 		return '%s - %s' % (self.user,self.provider)
+	def is_expired(self):
+		if self.provider == 'twitter': return False
+		return self.modified + datetime.timedelta(seconds=self.expires) < datetime.datetime.now()
 
 class SocialUser(models.Model):
 	username  = models.CharField(max_length=200)
@@ -25,17 +31,25 @@ class SocialUser(models.Model):
 		return self.username
 
 	def get_identity(self, provider):
-			identity = self.identityprovider_set.filter(provider=provider)[:1]
-			return identity and identity[0] or None
+		identity = self.identityprovider_set.filter(provider=provider)[:1]
+		return identity and identity[0] or None
+
+	def has_valid_session(self):
+		for identity in self.identityprovider_set.all():
+			if identity.provider == 'twitter': return True
+			else: return not identity.is_expired()
 
 	@staticmethod
 	def lookup(provider, user, info):
 		""" A method to get or create an identity provider for a user """
-
+		expires = info.get('expires', 0)
 		try:
 			identity = IdentityProvider.objects.get(
 							provider = provider,
 							external_user_id = info['external_user_id'])
+			identity.expires = expires
+			identity.token   = info['token']
+			identity.save()
 			user = identity.user
 			if not user.username:
 				user.username = info['name']
@@ -51,6 +65,7 @@ class SocialUser(models.Model):
 							external_user_id = info['external_user_id'],
 							name             = info['name'],
 							image_url        = info['image_url'],
+							expires          = expires,
 							data             = info['data']
 							)
 			identity.save()

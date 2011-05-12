@@ -8,7 +8,7 @@ from django.views.decorators.cache import never_cache
 import tweepy
 
 from social_auth.forms  import IdentityProviderForm
-from social_auth.models import SocialUser, IdentityProvider
+from social_auth.models import SocialUser
 
 FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
 FACEBOOK_API_SECRET = getattr(settings, 'FACEBOOK_API_SECRET', None)
@@ -30,7 +30,7 @@ def logout(request):
 def status(request):
 	user = request.session.get('user',None)
 	obj = None
-	if user:
+	if user and user.has_valid_session():
 		obj = {
 				'pk'        : user.id,
 				'username'  : user.username,
@@ -40,11 +40,12 @@ def status(request):
 				'identities': {},
 				}
 		for identity in user.identityprovider_set.all():
-			obj['identities'][identity.provider] = {
-					'name'             : identity.name,
-					'image_url'        : identity.image_url,
-					'external_user_id' : identity.external_user_id,
-					}
+			if identity.provider != 'facebook' or not identity.is_expired():
+				obj['identities'][identity.provider] = {
+						'name'             : identity.name,
+						'image_url'        : identity.image_url,
+						'external_user_id' : identity.external_user_id,
+						}
 		if obj['identities'] == {}: obj['identities'] = None
 
 	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
@@ -115,7 +116,7 @@ def facebook(request):
 	
 	if 'user' in request.session:
 		user     = request.session['user']
-		identity = user.get_identity('facebook')
+		identity = user.get_identity('facebook') #TODO: Check expires
 		if identity: return HttpResponseRedirect(redirect_url)
     
 	# TODO: Add a way to manage error responses
@@ -130,6 +131,7 @@ def facebook(request):
 		facebook_url = "%s?%s" % (access_url, urllib.urlencode(values))
 		result       = urllib.urlopen(facebook_url).read()
 		access_token = re.findall('^access_token=([^&]*)', result)[0]
+		expires      = result.split('expires=')[1]
 		request.session['facebook_access_token'] = access_token
 		
 		facebook_user = call_facebook_api(request, 'me', **{'fields':'id,name,picture'})
@@ -138,6 +140,7 @@ def facebook(request):
 			'external_user_id' : facebook_user['id'],
 			'name'             : facebook_user['name'],
 			'image_url'        : facebook_user['picture'],
+			'expires'          : expires,
 			'data'             : facebook_user,
 			}
 

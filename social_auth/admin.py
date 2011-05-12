@@ -9,6 +9,7 @@ user_image.allow_tags = True
 
 class IdentityProviderInline(admin.TabularInline):
 	model = IdentityProvider
+	fields  = ('provider', 'name', 'external_user_id', 'token', 'expires')
 	extra = 0
 
 class SocialUserAdmin(admin.ModelAdmin): 
