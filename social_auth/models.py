@@ -7,7 +7,7 @@ PROVIDER_CHOICES = (
 )
 
 class IdentityProvider(models.Model):
-	user             = models.ForeignKey('social_auth.SocialUser', blank=True, null=True)
+	user             = models.ForeignKey('social_auth.SocialUser')
 	provider         = models.CharField(max_length=10,choices=PROVIDER_CHOICES)
 	token            = models.CharField(max_length=200,blank=True)
 	external_user_id = models.CharField(max_length=200,blank=True)
@@ -36,8 +36,9 @@ class SocialUser(models.Model):
 
 	def has_valid_session(self):
 		for identity in self.identityprovider_set.all():
-			if identity.provider == 'twitter': return True
+			if identity.provider == 'twitter': continue
 			else: return not identity.is_expired()
+		return True
 
 	@staticmethod
 	def lookup(provider, user, info):
@@ -59,7 +60,13 @@ class SocialUser(models.Model):
 				user.save()
 
 		except IdentityProvider.DoesNotExist:
+			if not user:
+				user = SocialUser(
+						username  = info['name'],
+						image_url = info['image_url'])
+				user.save()
 			identity = IdentityProvider(
+							user             = user,
 							provider         = provider, 
 							token            = info['token'],
 							external_user_id = info['external_user_id'],
@@ -68,13 +75,6 @@ class SocialUser(models.Model):
 							expires          = expires,
 							data             = info['data']
 							)
-			identity.save()
-			if not user:
-				user = SocialUser(
-						username  = identity.name,
-						image_url = identity.image_url)
-				user.save()
-			identity.user = user
 			identity.save()
 		return user
 

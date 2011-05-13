@@ -37,16 +37,11 @@ def status(request):
 				'image_url' : user.image_url,
 				'created'   : user.created.strftime('%Y-%m-%d %H-%M-%S'),
 				'banned'    : user.banned,
-				'identities': {},
+				'identities': {
+						'twitter':  hasattr(user,'twitter')  and user.twitter  or None,
+						'facebook': hasattr(user,'facebook') and user.facebook or None,
+					},
 				}
-		for identity in user.identityprovider_set.all():
-			if identity.provider != 'facebook' or not identity.is_expired():
-				obj['identities'][identity.provider] = {
-						'name'             : identity.name,
-						'image_url'        : identity.image_url,
-						'external_user_id' : identity.external_user_id,
-						}
-		if obj['identities'] == {}: obj['identities'] = None
 
 	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
 
@@ -116,8 +111,10 @@ def facebook(request):
 	
 	if 'user' in request.session:
 		user     = request.session['user']
-		identity = user.get_identity('facebook') #TODO: Check expires
-		if identity: return HttpResponseRedirect(redirect_url)
+		if user.has_valid_session():
+		#identity = user.get_identity('facebook')
+		#if identity and not identity.is_expired(): 
+			return HttpResponseRedirect(redirect_url)
     
 	# TODO: Add a way to manage error responses
 	# error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
@@ -144,10 +141,14 @@ def facebook(request):
 			'data'             : facebook_user,
 			}
 
-		user = None
-		if 'user' in request.session:
-			user = request.session['user']
-		request.session['user'] = SocialUser.lookup('facebook', user, user_info)
+		user = request.session.get('user',None)
+		s_user = SocialUser.lookup('facebook', user, user_info)
+		s_user.facebook = {
+					'name'             : user_info['name'],
+					'image_url'        : user_info['image_url'],
+					'external_user_id' : user_info['external_user_id'],
+				}
+		request.session['user'] = s_user
 		return HttpResponseRedirect(redirect_url) 
 	redirect_url  = "%s?%s" % (authorize_url, urllib.urlencode(values))
 	return HttpResponseRedirect(redirect_url)
@@ -197,7 +198,13 @@ def twitter(request):
 			user = None
 			if 'user' in request.session:
 				user = request.session['user']
-			request.session['user'] = SocialUser.lookup('twitter', user, user_info)
+			s_user = SocialUser.lookup('twitter', user, user_info)
+			s_user.twitter = {
+						'name'             : user_info['name'],
+						'image_url'        : user_info['image_url'],
+						'external_user_id' : user_info['external_user_id'],
+					}
+			request.session['user'] = s_user
 
 		except tweepy.TweepError:
 			logging.warning('Error! Failed to get twitter request token.')
