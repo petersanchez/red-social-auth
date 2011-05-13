@@ -111,7 +111,14 @@ def facebook(request):
 	
 	if 'user' in request.session:
 		user     = request.session['user']
-		if user.has_valid_session():
+		identity = user.get_identity('facebook')
+		if identity and not identity.is_expired():
+			user.facebook = {
+				'name'             : identity.name,
+				'image_url'        : identity.image_url,
+				'external_user_id' : identity.external_user_id,
+				}
+			request.session['user'] = user
 			return HttpResponseRedirect(redirect_url)
     
 	# TODO: Add a way to manage error responses
@@ -171,7 +178,14 @@ def twitter(request):
 	if 'user' in request.session:
 		user = request.session['user']
 		identity = user.get_identity('twitter')
-		if identity: return HttpResponseRedirect(redirect_url)
+		if identity:
+			user.twitter = {
+				'name'             : identity.name,
+				'image_url'        : identity.image_url,
+				'external_user_id' : identity.external_user_id,
+				}
+			request.session['user'] = user
+			return HttpResponseRedirect(redirect_url)
 
 	if 'oauth_verifier' in request.GET:
 		auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
