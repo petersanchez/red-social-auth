@@ -112,8 +112,6 @@ def facebook(request):
 	if 'user' in request.session:
 		user     = request.session['user']
 		if user.has_valid_session():
-		#identity = user.get_identity('facebook')
-		#if identity and not identity.is_expired(): 
 			return HttpResponseRedirect(redirect_url)
     
 	# TODO: Add a way to manage error responses
