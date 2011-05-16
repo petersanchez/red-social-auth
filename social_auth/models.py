@@ -59,7 +59,7 @@ class SocialUser(models.Model):
 				user.image_url = info['image_url']
 				user.save()
 
-		except:# IdentityProvider.DoesNotExist:
+		except:
 			if not user:
 				user = SocialUser(
 						username  = info['name'],
