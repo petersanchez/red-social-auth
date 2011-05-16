@@ -8,7 +8,7 @@ from django.views.decorators.cache import never_cache
 import tweepy
 
 from social_auth.forms  import IdentityProviderForm
-from social_auth.models import SocialUser
+from social_auth.models import SocialUser, IdentityProvider
 
 FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
 FACEBOOK_API_SECRET = getattr(settings, 'FACEBOOK_API_SECRET', None)
@@ -32,7 +32,7 @@ def status(request):
 	obj = None
 	if user and user.has_valid_session():
 		obj = {
-				'pk'        : user.id,
+				#'pk'        : user.id,
 				'username'  : user.username,
 				'image_url' : user.image_url,
 				'created'   : user.created.strftime('%Y-%m-%d %H-%M-%S'),
@@ -233,5 +233,47 @@ def twitter(request):
 
 	# Store the request token in the session
 	request.session['twitter_request_token'] = (auth.request_token.key, auth.request_token.secret)
+	return HttpResponseRedirect(redirect_url)
+
+def test(request,u_id):
+	
+	redirect_url = '/'
+	if 'next' in request.GET:
+		redirect_url = request.GET['next']
+		request.session['next'] = redirect_url
+	elif 'next' in request.session:
+		redirect_url = request.session['next']
+
+	# The info is generic and used everywhere
+	info = {
+		'name'            : 'name %s' % u_id,
+		'image_url'       : 'image_url_%s.jpg' % u_id,
+		'external_user_id': u_id,
+	}
+	
+	# Get or Create a Social User with both twitter/facebook identities
+	if 'user' in request.session:
+		user = request.session['user']
+	else:
+		user,created = SocialUser.objects.get_or_create(
+								username  = info['name'],
+								image_url = info['image_url'])
+		if created:
+			for provider in ['twitter','facebook']:
+				identity = IdentityProvider(
+					user             = user,
+					provider         = provider, 
+					token            = json.dumps(['%s-%s' % (provider,u_id)]),
+					external_user_id = info['external_user_id'],
+					name             = info['name'],
+					image_url        = info['image_url'],
+					expires          = 9999,
+					data             = {},
+				)
+				identity.save()
+	
+	user.twitter  = info
+	user.facebook = info
+	request.session['user'] = user
 	return HttpResponseRedirect(redirect_url)
 

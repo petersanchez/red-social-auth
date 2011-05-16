@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.conf.urls.defaults import *
 
 urlpatterns = patterns('social_auth.views',
@@ -8,3 +9,7 @@ urlpatterns = patterns('social_auth.views',
 	url(r'^submit/$',   'submit',   name='auth_submit'), 
 )
 
+if getattr(settings, 'SOCIAL_AUTH_DEBUG', False):
+	urlpatterns += patterns('social_auth.views',
+		url(r'^test/(?P<u_id>[\d]+)$',     'test',     name='auth_test'), 
+	)
