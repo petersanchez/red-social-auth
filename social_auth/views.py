@@ -261,9 +261,8 @@ def test(request,u_id):
 			'external_user_id': u_id,
 		}
 	
-		user,created = SocialUser.objects.get_or_create(
-								username  = info['name'],
-								)
+		user,created = SocialUser.objects.get_or_create(username=info['name'])
+
 		if created:
 			for provider in ['twitter','facebook']:
 				identity = IdentityProvider(
