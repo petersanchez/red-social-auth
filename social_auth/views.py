@@ -23,6 +23,7 @@ def logout(request):
 		request.session['next'] = redirect_url
 	elif 'next' in request.session:
 		redirect_url = request.session['next']
+		del request.session['next']
 
 	request.session.flush()
 	return HttpResponseRedirect(redirect_url)
@@ -102,6 +103,7 @@ def facebook(request):
 		request.session['next'] = redirect_url
 	elif 'next' in request.session:
 		redirect_url = request.session['next']
+		del request.session['next']
 
 	access_url    = "https://graph.facebook.com/oauth/access_token"
 	authorize_url = "https://graph.facebook.com/oauth/authorize"
@@ -178,6 +180,7 @@ def twitter(request):
 		request.session['next'] = redirect_url
 	elif 'next' in request.session:
 		redirect_url = request.session['next']
+		del request.session['next']
 
 	if 'user' in request.session:
 		user = request.session['user']
