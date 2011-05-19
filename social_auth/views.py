@@ -250,6 +250,7 @@ def test(request,u_id):
 		request.session['next'] = redirect_url
 	elif 'next' in request.session:
 		redirect_url = request.session['next']
+		del request.session['next']
 
 	# Get or Create a Social User with both twitter/facebook identities
 	if 'user' not in request.session:
