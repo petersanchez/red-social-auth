@@ -251,20 +251,18 @@ def test(request,u_id):
 	elif 'next' in request.session:
 		redirect_url = request.session['next']
 
-	# The info is generic and used everywhere
-	info = {
-		'name'            : 'name %s' % u_id,
-		'image_url'       : 'image_url_%s.jpg' % u_id,
-		'external_user_id': u_id,
-	}
-	
 	# Get or Create a Social User with both twitter/facebook identities
-	if 'user' in request.session:
-		user = request.session['user']
-	else:
+	if 'user' not in request.session:
+		# The info is generic and used everywhere
+		info = {
+			'name'            : 'name %s' % u_id,
+			'image_url'       : 'image_url_%s.jpg' % u_id,
+			'external_user_id': u_id,
+		}
+	
 		user,created = SocialUser.objects.get_or_create(
 								username  = info['name'],
-								image_url = info['image_url'])
+								)
 		if created:
 			for provider in ['twitter','facebook']:
 				identity = IdentityProvider(
@@ -279,8 +277,9 @@ def test(request,u_id):
 				)
 				identity.save()
 	
-	user.twitter  = info
-	user.facebook = info
-	request.session['user'] = user
+		user.twitter  = info
+		user.facebook = info
+		request.session['user'] = user
+
 	return HttpResponseRedirect(redirect_url)
 
