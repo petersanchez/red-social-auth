@@ -129,7 +129,7 @@ def facebook(request):
 	# TODO: Add a way to manage error responses
 	# error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
 	if 'error' in request.GET:
-		logging.warning(request, 'Could not authorize on Facebook!')
+		logging.warning('Could not authorize on Facebook!')
 		return HttpResponseRedirect(redirect_url)
 
 	if 'code' in request.GET:
@@ -142,6 +142,7 @@ def facebook(request):
 		request.session['facebook_access_token'] = access_token
 		
 		facebook_user = call_facebook_api(request, 'me', **{'fields':'id,name,picture'})
+		print facebook_user
 		user_info     = {
 			'token'            : json.dumps(request.session['facebook_access_token']),
 			'external_user_id' : facebook_user['id'],
