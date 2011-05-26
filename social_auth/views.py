@@ -129,7 +129,11 @@ def facebook(request):
 	# TODO: Add a way to manage error responses
 	# error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
 	if 'error' in request.GET:
-		logging.warning('Could not authorize on Facebook!')
+		logging.warning('Error! %s: %s - %s' % (
+			request.GET['error'],
+			request.GET['error_reason'],
+			' '.join(request.GET['error_description'].split('+')))
+			)
 		return HttpResponseRedirect(redirect_url)
 
 	if 'code' in request.GET:
@@ -142,24 +146,31 @@ def facebook(request):
 		request.session['facebook_access_token'] = access_token
 		
 		facebook_user = call_facebook_api(request, 'me', **{'fields':'id,name,picture'})
-		print facebook_user
-		user_info     = {
-			'token'            : json.dumps(request.session['facebook_access_token']),
-			'external_user_id' : facebook_user['id'],
-			'name'             : facebook_user['name'],
-			'image_url'        : facebook_user['picture'],
-			'expires'          : expires,
-			'data'             : facebook_user,
-			}
-
-		user = request.session.get('user',None)
-		s_user = SocialUser.lookup('facebook', user, user_info)
-		s_user.facebook = {
-					'name'             : user_info['name'],
-					'image_url'        : user_info['image_url'],
-					'external_user_id' : user_info['external_user_id'],
+		
+		# Error handling
+		if 'error' in facebook_user:
+			logging.warning('Error! %s: %s' % (
+				facebook_user['error']['type'],
+				facebook_user['error']['message'],
+				))
+		else:
+			user_info     = {
+				'token'            : json.dumps(request.session['facebook_access_token']),
+				'external_user_id' : facebook_user['id'],
+				'name'             : facebook_user['name'],
+				'image_url'        : facebook_user['picture'],
+				'expires'          : expires,
+				'data'             : facebook_user,
 				}
-		request.session['user'] = s_user
+
+			user = request.session.get('user',None)
+			s_user = SocialUser.lookup('facebook', user, user_info)
+			s_user.facebook = {
+						'name'             : user_info['name'],
+						'image_url'        : user_info['image_url'],
+						'external_user_id' : user_info['external_user_id'],
+					}
+			request.session['user'] = s_user
 		return HttpResponseRedirect(redirect_url) 
 	redirect_url  = "%s?%s" % (authorize_url, urllib.urlencode(values))
 	return HttpResponseRedirect(redirect_url)
