@@ -1,4 +1,4 @@
-import json, logging, re, urllib
+import json, logging, re, urllib, urllib2
 
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
@@ -10,6 +10,7 @@ import tweepy
 from social_auth.forms  import IdentityProviderForm
 from social_auth.models import SocialUser, IdentityProvider
 
+URL_TIMEOUT         = getattr(settings, 'SOCIAL_AUTH_URL_TIMEOUT', 15)
 FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
 FACEBOOK_API_SECRET = getattr(settings, 'FACEBOOK_API_SECRET', None)
 TWITTER_API_KEY     = getattr(settings, 'TWITTER_API_KEY', None)
@@ -88,10 +89,10 @@ def call_facebook_api(request, method=None, **kwargs):
 	data = urllib.urlencode(graph_dict)
 	url  = 'https://graph.facebook.com/%s' % method
 	if method !='me': 
-		response = json.loads(urllib.urlopen(url, data).read())
+		response = json.loads(urllib2.urlopen(url, data, URL_TIMEOUT).read())
 	else:
 		url += '?%s' % data
-		response = json.loads(urllib.urlopen(url).read())
+		response = json.loads(urllib2.urlopen(url, None, URL_TIMEOUT).read())
 	return response
 
 @never_cache
@@ -140,7 +141,7 @@ def facebook(request):
 		values['code']          = request.GET.get('code')
 		values['client_secret'] = FACEBOOK_API_SECRET
 		facebook_url = "%s?%s" % (access_url, urllib.urlencode(values))
-		result       = urllib.urlopen(facebook_url).read()
+		result       = urllib2.urlopen(facebook_url, None, URL_TIMEOUT).read()
 		access_token = re.findall('^access_token=([^&]*)', result)[0]
 		expires      = result.split('expires=')[1]
 		request.session['facebook_access_token'] = access_token
