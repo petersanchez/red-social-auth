@@ -11,13 +11,18 @@ This is a django app that adds Facebook and Twitter users to your project.
         TWITTER_API_KEY     = 'yourapikey'
         TWITTER_API_SECRET  = 'yourapisecret'
 
-2. Next add 'social_auth' to your INSTALLED_APPS in your settings.py file.
+2. You may additionally add the following settings:
 
-3. Add the following line to your urls.py files:
+        SOCIAL_AUTH_URL_TIMEOUT = 15    # Defaults to 15 seconds
+        SOCIAL_AUTH_DEBUG       = False # Defaults to False
+
+3. Next add 'social_auth' to your INSTALLED_APPS in your settings.py file.
+
+4. Add the following line to your urls.py files:
 
         (r'^auth/', include('social_auth.urls')),
 
-4. Run 'python manage.py syncdb' on your project and you're done!
+5. Run 'python manage.py syncdb' on your project and you're done!
 
 
 ## Usage
