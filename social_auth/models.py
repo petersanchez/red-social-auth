@@ -41,6 +41,11 @@ class SocialUser(models.Model):
 		return True
 
 	@staticmethod
+	def is_banned(user):
+		user = SocialUser.objects.get(id=user.id)
+		return user.banned
+
+	@staticmethod
 	def lookup(provider, user, info):
 		""" A method to get or create an identity provider for a user """
 		expires = info.get('expires', 0)
