@@ -2,6 +2,8 @@
 
 This is a django app that adds Facebook and Twitter users to your project.
 
+Maintainer: Chris Gilmer at FF0000
+
 ## Setup
 
 1. The first step is to add your keys to the settings.py file:
