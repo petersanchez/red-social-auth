@@ -94,7 +94,8 @@ def call_facebook_api(request, method=None, **kwargs):
 	try:
 		url_call = urllib2.urlopen(url, data, URL_TIMEOUT).read()
 	except urllib2.HTTPError, error:
-		logging.warning(error.read())
+		logging.error('HTTP Error!:')
+		logging.error(error.read())
 		url_call = "{}"
 	response = json.loads(url_call)
 	return response
@@ -134,7 +135,7 @@ def facebook(request):
 	# TODO: Add a way to manage error responses
 	# error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
 	if 'error' in request.GET:
-		logging.warning('Error! %s: %s - %s' % (
+		logging.error('Error! %s: %s - %s' % (
 			request.GET['error'],
 			request.GET['error_reason'],
 			' '.join(request.GET['error_description'].split('+')))
@@ -158,7 +159,7 @@ def facebook(request):
 			
 			# Error handling
 			if 'error' in facebook_user:
-				logging.warning('Error! %s: %s' % (
+				logging.error('Error! %s: %s' % (
 					facebook_user['error']['type'],
 					facebook_user['error']['message'],
 					))
@@ -248,7 +249,7 @@ def twitter(request):
 				request.session['user'] = s_user
 
 			except tweepy.TweepError:
-				logging.warning('Error! Failed to get twitter request token.')
+				logging.error('Error! Failed to get twitter request token.')
 				
 		return HttpResponseRedirect(redirect_url) 
 	
@@ -261,7 +262,7 @@ def twitter(request):
 		# Store the request token in the session
 		request.session['twitter_request_token'] = (auth.request_token.key, auth.request_token.secret)
 	except tweepy.TweepError:
-		logging.warning('Error! Failed to get twitter request token.')
+		logging.error('Error! Failed to get twitter request token.')
 
 	return HttpResponseRedirect(redirect_url)
 
