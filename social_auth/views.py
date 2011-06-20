@@ -88,11 +88,15 @@ def call_facebook_api(request, method=None, **kwargs):
 	graph_dict.update(kwargs)
 	data = urllib.urlencode(graph_dict)
 	url  = 'https://graph.facebook.com/%s' % method
-	if method !='me': 
-		response = json.loads(urllib2.urlopen(url, data, URL_TIMEOUT).read())
-	else:
+	if method =='me': 
 		url += '?%s' % data
-		response = json.loads(urllib2.urlopen(url, None, URL_TIMEOUT).read())
+		data = None
+	try:
+		url_call = urllib2.urlopen(url, data, URL_TIMEOUT).read()
+	except urllib2.HTTPError, error:
+		logging.warning(error.read())
+		url_call = "{}"
+	response = json.loads(url_call)
 	return response
 
 @never_cache
