@@ -1,10 +1,10 @@
-from django.db import models
 import datetime
 
-PROVIDER_CHOICES = (
-	('facebook','facebook'),
-	('twitter', 'twitter'),
-)
+from django.conf import settings
+from django.db import models
+
+PROVIDERS = getattr(settings, 'SOCIAL_AUTH_PROVIDERS', ('facebook', 'twitter'))
+PROVIDER_CHOICES = [(x,x) for x in PROVIDERS]
 
 class IdentityProvider(models.Model):
 	user             = models.ForeignKey('social_auth.SocialUser')

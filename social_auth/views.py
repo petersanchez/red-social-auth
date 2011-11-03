@@ -6,15 +6,19 @@ from django.shortcuts import redirect
 from django.views.decorators.cache import never_cache
 
 import tweepy
-
+from social_auth import oauth2
+from social_auth import https_connection
 from social_auth.forms  import IdentityProviderForm
-from social_auth.models import SocialUser, IdentityProvider
+from social_auth.models import SocialUser, IdentityProvider, PROVIDERS
+from social_auth.oauth2 import VerifiedHTTPSConnection
 
 URL_TIMEOUT         = getattr(settings, 'SOCIAL_AUTH_URL_TIMEOUT', 15)
 FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
 FACEBOOK_API_SECRET = getattr(settings, 'FACEBOOK_API_SECRET', None)
 TWITTER_API_KEY     = getattr(settings, 'TWITTER_API_KEY', None)
 TWITTER_API_SECRET  = getattr(settings, 'TWITTER_API_SECRET', None)
+GOOGLE_API_SECRET = getattr(settings, 'GOOGLE_API_SECRET', None)
+GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
 
 @never_cache
 def logout(request):
@@ -34,17 +38,18 @@ def status(request):
 	user = request.session.get('user',None)
 	obj = None
 	if user and user.has_valid_session():
+		identities = []
+		for provider in PROVIDERS:
+			identities.append(getattr(user, provider, None))
+
 		obj = {
 				#'pk'        : user.id,
 				'username'  : user.username,
 				'image_url' : user.image_url,
 				'created'   : user.created.strftime('%Y-%m-%d %H-%M-%S'),
 				'banned'    : user.banned,
-				'identities': {
-						'twitter':  hasattr(user,'twitter')  and user.twitter  or None,
-						'facebook': hasattr(user,'facebook') and user.facebook or None,
-					},
-				}
+				'identities': identities,
+		}
 
 	return HttpResponse(json.dumps({'user':obj}),mimetype="application/json")
 
@@ -66,7 +71,7 @@ def submit(request):
 				user = request.session['user']
 			request.session['user'] = SocialUser.lookup(provider, user, user_info)
 			return redirect('auth_status')
-	
+
 	return HttpResponse(json.dumps({'error':'post request invalid'}),mimetype="application/json")
 
 def _get_access_token(request, provider):
@@ -248,11 +253,12 @@ def twitter(request):
 						}
 				request.session['user'] = s_user
 
-			except tweepy.TweepError:
+			except tweepy.TweepError, e:
 				logging.error('Error! Failed to get twitter request token.')
+				logging.error(e)
 				
 		return HttpResponseRedirect(redirect_url) 
-	
+
 	# Authenticate with Twitter and get redirect_url
 	callback_url = request.build_absolute_uri()
 	auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET, callback_url)
@@ -261,8 +267,83 @@ def twitter(request):
 		redirect_url = auth.get_authorization_url()
 		# Store the request token in the session
 		request.session['twitter_request_token'] = (auth.request_token.key, auth.request_token.secret)
-	except tweepy.TweepError:
+	except tweepy.TweepError, e:
 		logging.error('Error! Failed to get twitter request token.')
+		logging.error(e)
+
+	return HttpResponseRedirect(redirect_url)
+
+@never_cache
+def google(request):
+
+	redirect_url = '/'
+	if 'next' in request.GET:
+		redirect_url = request.GET['next']
+		request.session['next'] = redirect_url
+	elif 'next' in request.session:
+		redirect_url = request.session['next']
+		del request.session['next']
+
+	if 'user' in request.session:
+		user = request.session['user']
+		identity = user.get_identity('google')
+		if identity:
+			user.google = {
+				'name'             : identity.name,
+				'image_url'        : identity.image_url,
+				'external_user_id' : identity.external_user_id,
+				}
+			request.session['user'] = user
+			return HttpResponseRedirect(redirect_url)
+
+	# Don't use build_absolute_uri so we can drop GET
+	callback_url = '%s://%s%s' % (request.is_secure() and 'https' or 'http',
+	                             request.get_host(), request.path)
+	if 'error' in request.GET:
+		logging.error('Error! %s: Reason %s - Description %s' % (
+			request.GET['error'],
+			request.GET.get('error_reason'),
+			' '.join(request.GET.get('error_description', '').split('+')))
+			)
+		return HttpResponseRedirect(redirect_url)
+	elif 'code' in request.GET:
+		try:
+			o = oauth2.GooglePlus.create_from_authorization_code(
+			                       request.GET['code'], GOOGLE_API_KEY,
+			                       GOOGLE_API_SECRET, callback_url,)
+			profile = o.get_user()
+			user_info     = {
+				'token'            : o.refresh_token,
+				'external_user_id' : profile['id'],
+				'name'             : profile['displayName'],
+				'image_url'        : profile['image']['url'],
+				'expires'          : 3600,
+				'data'             : profile,
+				}
+
+			user = request.session.get('user',None)
+			s_user = SocialUser.lookup('google', user, user_info)
+			s_user.google = {
+						'name'             : user_info['name'],
+						'image_url'        : user_info['image_url'],
+						'external_user_id' : user_info['external_user_id'],
+					}
+			request.session['user'] = s_user
+		except oauth2.RequestError, e:
+			# 404 means user doesn't have google profile.
+			# But the rest of this doesn't seem to have
+			# any sort of error messages for users
+			# so just passing for now
+			if e.status == 404:
+				pass
+			logging.error(e)
+
+		return HttpResponseRedirect(redirect_url)
+
+	# Authenticate with Google and get redirect_url
+	redirect_url = oauth2.OAuth2Handler.get_auth_url(GOOGLE_API_KEY,
+	                          GOOGLE_API_SECRET, callback_url,
+                              scopes=('https://www.googleapis.com/auth/plus.me',) )
 
 	return HttpResponseRedirect(redirect_url)
 
@@ -277,7 +358,7 @@ def test(request,u_id):
 		redirect_url = request.session['next']
 		del request.session['next']
 
-	# Get or Create a Social User with both twitter/facebook identities
+	# Get or Create a Social User with all identities
 	if 'user' not in request.session:
 		# The info is generic and used everywhere
 		info = {
@@ -285,11 +366,11 @@ def test(request,u_id):
 			'image_url'       : 'image_url_%s.jpg' % u_id,
 			'external_user_id': u_id,
 		}
-	
+
 		user,created = SocialUser.objects.get_or_create(username=info['name'])
 
 		if created:
-			for provider in ['twitter','facebook']:
+			for provider in PROVIDERS:
 				identity = IdentityProvider(
 					user             = user,
 					provider         = provider, 
@@ -301,9 +382,7 @@ def test(request,u_id):
 					data             = {},
 				)
 				identity.save()
-	
-		user.twitter  = info
-		user.facebook = info
+				setattr(user, provider, info)
 		request.session['user'] = user
 
 	return HttpResponseRedirect(redirect_url)
