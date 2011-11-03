@@ -2,7 +2,7 @@
 
 This is a django app that adds Facebook and Twitter users to your project.
 
-Maintainer: Chris Gilmer at FF0000
+Maintainer: Peter Volpe at FF0000
 
 ## Setup
 
