@@ -3,7 +3,7 @@ import datetime
 from django.conf import settings
 from django.db import models
 
-PROVIDERS = getattr(settings, 'SOCIAL_AUTH_PROVIDERS', ('facebook', 'twitter'))
+PROVIDERS = getattr(settings, 'SOCIAL_AUTH_PROVIDERS', ('facebook', 'twitter', 'google'))
 PROVIDER_CHOICES = [(x,x) for x in PROVIDERS]
 
 class IdentityProvider(models.Model):
