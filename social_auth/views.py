@@ -74,8 +74,10 @@ def submit(request):
 			return redirect('auth_status')
 
 	return HttpResponse(json.dumps({'error':'post request invalid'}),mimetype="application/json")
-	
-	
+
+
+@never_cache
+@csrf_exempt
 def pre_authed(request):
 	"""This strikes me as totally insecure"""
 	
