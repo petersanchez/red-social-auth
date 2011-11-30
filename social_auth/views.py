@@ -108,7 +108,6 @@ def pre_authed(request):
 			del(identity['token'])
 			
 			# Bad but we are in a hurry
-			identity['cookie'] = request.COOKIES[settings.SESSION_COOKIE_NAME] 
 			jsonr = json.dumps(identity)
 			
 		else:
