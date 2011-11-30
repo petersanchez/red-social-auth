@@ -97,8 +97,7 @@ def pre_authed(request):
 				token =  form.cleaned_data['token'].split(",")
 			
 			s_user = SocialUser.create_from_token(provider,token)
-			print "hello"
-			print s_user
+			
 			request.session['user'] = s_user
 			identity = s_user.identityprovider_set.get(provider=provider).__dict__
 			

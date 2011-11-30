@@ -124,7 +124,6 @@ class SocialUser(models.Model):
 	def lookup(provider, user, info):
 		""" A method to get or create an identity provider for a user """
 		
-		print "========== LOookiing up"
 		expires = info.get('expires', 0)
 		try:
 			identity = IdentityProvider.objects.get(
