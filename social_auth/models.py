@@ -74,8 +74,9 @@ class SocialUser(models.Model):
 				logging.error('HTTP Error!:')
 				logging.error(error.read())
 				url_call = "{}"
-			print url_call
-			facebook_user = json.loads(url_call)
+			
+			facebook_user = json.loads(url_call) 
+			
 			
 			user_info = {
 				'token'            : token,

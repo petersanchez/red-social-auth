@@ -243,7 +243,7 @@ def get_twitter_api(request):
 	access_token = _get_access_token(request,'twitter')
 	auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
 	auth.set_access_token(access_token[0], access_token[1])
-	return tweepy.API(auth).me()
+	return tweepy.API(auth)
 
 @never_cache
 def twitter(request):
