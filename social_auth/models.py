@@ -66,7 +66,6 @@ class SocialUser(models.Model):
 			
 			data = urllib.urlencode(graph_dict)
 			url  = 'https://graph.facebook.com/me?%s' % data
-			print url
 			
 			try:
 				url_call = urllib2.urlopen(url, None, URL_TIMEOUT).read()
@@ -125,7 +124,6 @@ class SocialUser(models.Model):
 	def lookup(provider, user, info):
 		""" A method to get or create an identity provider for a user """
 		
-		print "========== LOookiing up"
 		expires = info.get('expires', 0)
 		try:
 			identity = IdentityProvider.objects.get(

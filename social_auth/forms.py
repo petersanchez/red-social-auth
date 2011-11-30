@@ -14,6 +14,5 @@ class IdentityProviderForm(forms.ModelForm):
 class PreAuthedForm(forms.Form):
 	""" A class to validate identity providers """
 
-	
 	provider = forms.ChoiceField(choices=PROVIDER_CHOICES)
 	token = forms.CharField(max_length=160)
