@@ -8,7 +8,7 @@ from django.views.decorators.cache import never_cache
 import tweepy
 from social_auth import oauth2
 from social_auth import https_connection
-from social_auth.forms  import IdentityProviderForm
+from social_auth.forms  import IdentityProviderForm,PreAuthedForm
 from social_auth.models import SocialUser, IdentityProvider, PROVIDERS
 from social_auth.oauth2 import VerifiedHTTPSConnection
 
@@ -73,6 +73,53 @@ def submit(request):
 			return redirect('auth_status')
 
 	return HttpResponse(json.dumps({'error':'post request invalid'}),mimetype="application/json")
+	
+	
+def pre_authed(request):
+	"""This strikes me as totally insecure"""
+	
+	jsonr = json.dumps({'error':'invalid request'})
+	provider = None
+	token = None
+	
+	if request.REQUEST.has_key('provider'):
+		form = PreAuthedForm(request.REQUEST)
+		
+		if form.is_valid():
+			
+			provider = form.cleaned_data['provider']
+			token = form.cleaned_data['token']
+			
+			# twitter gives us and id and a secret so we have to format it's 
+			# token for our usage
+			if form.cleaned_data['provider'] == 'twitter':
+				token =  form.cleaned_data['token'].split(",")
+			
+			s_user = SocialUser.create_from_token(provider,token)
+			print "hello"
+			print s_user
+			request.session['user'] = s_user
+			identity = s_user.identityprovider_set.get(provider=provider).__dict__
+			
+			# ya it's ugly
+			del(identity['data'])
+			del(identity['modified'])
+			del(identity['user_id'])
+			del(identity['_state'])
+			del(identity['token'])
+			
+			# Bad but we are in a hurry
+			identity['cookie'] = request.COOKIES[settings.SESSION_COOKIE_NAME] 
+			jsonr = json.dumps(identity)
+			
+		else:
+			jsonr = json.dumps(form.errors)
+	
+	
+	return HttpResponse(jsonr,mimetype="application/json")
+		
+		
+		
 
 def _get_access_token(request, provider):
 	if 'user' in request.session:
@@ -176,15 +223,15 @@ def facebook(request):
 					'image_url'        : facebook_user['picture'],
 					'expires'          : expires,
 					'data'             : facebook_user,
-					}
+				}
 
 				user = request.session.get('user',None)
 				s_user = SocialUser.lookup('facebook', user, user_info)
 				s_user.facebook = {
-							'name'             : user_info['name'],
-							'image_url'        : user_info['image_url'],
-							'external_user_id' : user_info['external_user_id'],
-						}
+					'name'             : user_info['name'],
+					'image_url'        : user_info['image_url'],
+					'external_user_id' : user_info['external_user_id'],
+				}
 				request.session['user'] = s_user
 		return HttpResponseRedirect(redirect_url) 
 	redirect_url  = "%s?%s" % (authorize_url, urllib.urlencode(values))
@@ -196,7 +243,7 @@ def get_twitter_api(request):
 	access_token = _get_access_token(request,'twitter')
 	auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
 	auth.set_access_token(access_token[0], access_token[1])
-	return tweepy.API(auth)
+	return tweepy.API(auth).me()
 
 @never_cache
 def twitter(request):
@@ -240,7 +287,7 @@ def twitter(request):
 					'name'             : twitter_user.screen_name,
 					'image_url'        : twitter_user.profile_image_url,
 					'data'             : twitter_user.__dict__,
-					}
+				}
 				
 				user = None
 				if 'user' in request.session:

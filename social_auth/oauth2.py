@@ -176,6 +176,7 @@ class OAuth2Handler(object):
         headers['Authorization'] = 'OAuth %s' % self.access_token
 
         conn = VerifiedHTTPSConnection(self.DOMAIN)
+
         conn.request(method, url, body, headers)
 
         response = conn.getresponse()
