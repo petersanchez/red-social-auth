@@ -1,10 +1,18 @@
+import logging
 import datetime
+import tweepy
+import json
+import urllib, urllib2
+from social_auth import oauth2
 
 from django.conf import settings
 from django.db import models
 
+
+
 PROVIDERS = getattr(settings, 'SOCIAL_AUTH_PROVIDERS', ('facebook', 'twitter', 'google'))
 PROVIDER_CHOICES = [(x,x) for x in PROVIDERS]
+URL_TIMEOUT         = getattr(settings, 'SOCIAL_AUTH_URL_TIMEOUT', 15)
 
 class IdentityProvider(models.Model):
 	user             = models.ForeignKey('social_auth.SocialUser')
@@ -29,6 +37,73 @@ class SocialUser(models.Model):
 	created   = models.DateTimeField(auto_now_add=True, db_index=True)
 	def __unicode__(self):
 		return self.username
+	
+	@staticmethod
+	def create_from_token(provider,token):
+		""" 
+		Pass me a provider and the access token and I'll set up a 
+		SocialUser and IdentityProvider
+		"""
+		s_user = None
+		if provider == 'twitter':
+			auth = tweepy.OAuthHandler(settings.TWITTER_API_KEY, settings.TWITTER_API_SECRET)
+			auth.set_access_token(token[0], token[1])
+			twitter_user = tweepy.API(auth).me()
+			user_info = {
+				'token'            : json.dumps(token),
+				'external_user_id' : twitter_user.id,
+				'name'             : twitter_user.screen_name,
+				'image_url'        : twitter_user.profile_image_url,
+				'data'             : twitter_user.__dict__,
+			}
+			s_user = SocialUser.lookup('twitter', None, user_info)
+		elif provider == 'facebook':
+			
+			graph_dict = {
+				'access_token' : token,
+				'fields':'id,name,picture'
+			}
+			
+			data = urllib.urlencode(graph_dict)
+			url  = 'https://graph.facebook.com/me?%s' % data
+			print url
+			
+			try:
+				url_call = urllib2.urlopen(url, None, URL_TIMEOUT).read()
+			except urllib2.HTTPError, error:
+				logging.error('HTTP Error!:')
+				logging.error(error.read())
+				url_call = "{}"
+			print url_call
+			facebook_user = json.loads(url_call)
+			
+			user_info = {
+				'token'            : token,
+				'external_user_id' : facebook_user['id'],
+				'name'             : facebook_user['name'],
+				'image_url'        : facebook_user['picture'],
+				'data'             : url_call
+			}
+
+			s_user = SocialUser.lookup('facebook', None, user_info)
+			
+		elif provider == 'google':
+
+			o = oauth2.GooglePlus(token, settings.GOOGLE_API_KEY,
+			                       settings.GOOGLE_API_SECRET)
+			
+			profile = o.get_user()
+			user_info     = {
+				'token'            : o.refresh_token,
+				'external_user_id' : profile['id'],
+				'name'             : profile['displayName'],
+				'image_url'        : profile['image']['url'],
+				'expires'          : 3600,
+				'data'             : profile,
+				}
+			s_user = SocialUser.lookup('google', None, user_info)
+			
+		return s_user
 
 	def get_identity(self, provider):
 		identity = self.identityprovider_set.filter(provider=provider)[:1]
@@ -48,15 +123,20 @@ class SocialUser(models.Model):
 	@staticmethod
 	def lookup(provider, user, info):
 		""" A method to get or create an identity provider for a user """
+		
+		print "========== LOookiing up"
 		expires = info.get('expires', 0)
 		try:
 			identity = IdentityProvider.objects.get(
 							provider = provider,
 							external_user_id = info['external_user_id'])
+							
 			identity.expires = expires
 			identity.token   = info['token']
 			identity.save()
+			
 			user = identity.user
+			
 			if not user.username:
 				user.username = info['name']
 				user.save()
