@@ -313,7 +313,7 @@ def google(request):
 			                       GOOGLE_API_SECRET, callback_url,)
 			profile = o.get_user()
 			user_info     = {
-				'token'            : o.refresh_token,
+				'token'            : o.refresh_token and o.refresh_token or o.access_token,
 				'external_user_id' : profile['id'],
 				'name'             : profile['displayName'],
 				'image_url'        : profile['image']['url'],

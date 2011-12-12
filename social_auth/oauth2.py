@@ -25,15 +25,19 @@ class OAuth2Handler(object):
     TOKEN_URL = "/o/oauth2/token"
 
     @classmethod
-    def get_auth_url(klass, client_id, client_secret, redirect_uri, scopes=[]):
+    def get_auth_url(klass, client_id, client_secret, redirect_uri, scopes=[], offline=False):
         scope_string = ' '.join(scopes)
 
-        params = urllib.urlencode({
+        params = {
             'client_id' : client_id,
             'scope' : scope_string,
             'redirect_uri' : redirect_uri,
-            'response_type' : 'code'
-        })
+            'response_type' : 'code',
+        }
+        if offline:
+            params['access_type'] = 'offline'
+        params = urllib.urlencode(params)
+
         url = "https://%s%s?%s" % (klass.TOKEN_DOMAIN, klass.AUTH_URL, params)
         return url
 
@@ -59,7 +63,7 @@ class OAuth2Handler(object):
         if response.status == 200:
             value = json.loads(data)
             access_token = value['access_token']
-            refresh_token = value['refresh_token']
+            refresh_token = value.get('refresh_token')
         else:
             dict = { 'status' : response.status }
             try:
@@ -69,26 +73,31 @@ class OAuth2Handler(object):
                 dict['data'] = data
             raise RequestError(dict)
 
-        cls = klass(refresh_token, client_id, client_secret)
+        token = access_token
+        if refresh_token:
+            token = refresh_token
+        cls = klass(token, client_id, client_secret)
         cls.access_token = access_token
         return cls
 
 
-    def __init__(self, refresh_token, client_id, client_secret):
+    def __init__(self, token, client_id, client_secret):
 
-        assert refresh_token and client_id and client_secret
+        assert token and client_id and client_secret
 
         self.client_id = client_id
         self.client_secret = client_secret
-        self.refresh_token = refresh_token
 
+        # Token could be a refresh token
+        # or an access token
+        self.refresh_token = token
+        self._access_token = token
 
         self.base_auth_args = {
             'client_id' : self.client_id,
             'client_secret' : self.client_secret,
         }
 
-        self._access_token = None
         self._customer_resource_id = None
 
     def _set_access_token(self, val):
