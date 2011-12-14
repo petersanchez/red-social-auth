@@ -38,9 +38,9 @@ def status(request):
 	user = request.session.get('user',None)
 	obj = None
 	if user and user.has_valid_session():
-		identities = []
+		identities = {}
 		for provider in PROVIDERS:
-			identities.append(getattr(user, provider, None))
+			identities[provider] = getattr(user, provider, None)
 
 		obj = {
 				#'pk'        : user.id,
