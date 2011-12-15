@@ -122,53 +122,6 @@ def pre_authed(request):
 		
 		
 
-
-@never_cache
-@csrf_exempt
-def pre_authed(request):
-	"""This strikes me as totally insecure"""
-	
-	jsonr = json.dumps({'error':'invalid request'})
-	provider = None
-	token = None
-	
-	if request.REQUEST.has_key('provider'):
-		form = PreAuthedForm(request.REQUEST)
-		
-		if form.is_valid():
-			
-			provider = form.cleaned_data['provider']
-			token = form.cleaned_data['token']
-			
-			# twitter gives us and id and a secret so we have to format it's 
-			# token for our usage
-			if form.cleaned_data['provider'] == 'twitter':
-				token =  form.cleaned_data['token'].split(",")
-			
-			s_user = SocialUser.create_from_token(provider,token)
-			
-			request.session['user'] = s_user
-			identity = s_user.identityprovider_set.get(provider=provider).__dict__
-			
-			# ya it's ugly
-			del(identity['data'])
-			del(identity['modified'])
-			del(identity['user_id'])
-			del(identity['_state'])
-			del(identity['token'])
-			
-			# Bad but we are in a hurry
-			jsonr = json.dumps(identity)
-			
-		else:
-			jsonr = json.dumps(form.errors)
-	
-	
-	return HttpResponse(jsonr,mimetype="application/json")
-		
-		
-		
-
 def _get_access_token(request, provider):
 	if 'user' in request.session:
 		user = request.session.get('user')
