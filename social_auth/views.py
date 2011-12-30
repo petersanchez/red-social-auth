@@ -11,6 +11,13 @@ from social_auth import https_connection
 from social_auth.forms  import IdentityProviderForm
 from social_auth.models import SocialUser, IdentityProvider, PROVIDERS
 from social_auth.oauth2 import VerifiedHTTPSConnection
+from social_auth.openid_store import SocialAuthStore
+
+from openid.consumer import consumer
+from openid.extensions import pape, sreg
+from openid.oidutil import appendArgs
+
+logger = logging.getLogger(__name__)
 
 URL_TIMEOUT         = getattr(settings, 'SOCIAL_AUTH_URL_TIMEOUT', 15)
 FACEBOOK_API_KEY    = getattr(settings, 'FACEBOOK_API_KEY', None)
@@ -387,3 +394,89 @@ def test(request,u_id):
 
 	return HttpResponseRedirect(redirect_url)
 
+
+@never_cache
+def openid(request):
+
+	redirect_url = '/'
+	if 'next' in request.GET:
+		redirect_url = request.GET['next']
+		request.session['next'] = redirect_url
+	elif 'next' in request.session:
+		redirect_url = request.session['next']
+		del request.session['next']
+
+	openid_url = request.GET.get('openid_identifier')
+	process = request.GET.get('process')
+	immediate = 'immediate' in request.GET
+	use_sreg = True #'use_sreg' in request.GET
+	use_pape = 'use_pape' in request.GET
+	
+	store = SocialAuthStore()
+	openid_consumer = consumer.Consumer(request.session, store)
+	
+	if process:
+		url = '%s://%s%s' % (request.is_secure() and 'https' or 'http', request.get_host(), request.path)
+		info = openid_consumer.complete(request.GET, url)
+		logger.debug("openid process request for: %s" % url)
+
+		sreg_resp = None
+		pape_resp = None
+		user_identifier = info.getDisplayIdentifier()
+
+		if info.status == consumer.FAILURE and user_identifier:
+			logger.error("Verification of %s failed: %s" % user_identifier, info.message)
+		elif info.status == consumer.SUCCESS:
+			logger.debug("You have successfully verified %s as your identity." % user_identifier)
+			sreg_resp = sreg.SRegResponse.fromSuccessResponse(info)
+			pape_resp = pape.Response.fromSuccessResponse(info)
+			name = info.identity_url
+			if sreg_resp and 'nickname' in sreg_resp.data:
+				name = sreg_resp.data['nickname']
+			user_info = {
+		                'token'            : '',
+		                'external_user_id' : info.identity_url,
+		                'name'             : name,
+		                'image_url'        : '',
+		                'data'             : '',
+		        }
+			assoc = store.getAssociation(info.endpoint.server_url)
+			if not assoc:
+				logger.error("Can't find Openid_Association for endpoint %s" % info.endpoint.server_url)
+			else:
+				user_info['expires'] = assoc.getExpiresIn()
+			user = None
+			if 'user' in request.session:
+				user = request.session['user']
+			request.session['user'] = SocialUser.lookup('openid', user, user_info)
+		elif info.status == consumer.CANCEL:
+			logger.error("Verification cancelled for %s" % user_identifier)
+		elif info.status == consumer.SETUP_NEEDED:
+			logger.error("Setup needed for %s" % user_identifier)
+		else:
+			logger.error("Verification failed for %s, unkown cause" % user_identifier)
+	elif openid_url:
+		try:
+			logger.debug("openid request for: %s" % openid_url)
+			openid_request = openid_consumer.begin(openid_url)
+		except consumer.DiscoveryFailure, e:
+			logger.error("Error in discovery: %s" % str(e[0]))
+			return HttpResponseRedirect(redirect_url)
+		else:
+			if openid_request is None:
+				logger.error("No OpenID services found for %s" % openid_url)
+				return HttpResponseRedirect(redirect_url)
+			else:
+				if use_sreg:
+					openid_request.addExtension(sreg.SRegRequest(required=[], optional=['nickname']))
+				if use_pape:
+					openid_request.addExtension(pape.Request([pape.AUTH_PHISHING_RESISTANT]))
+
+				callback_root = '%s://%s%s' % (request.is_secure() and 'https' or 'http', request.get_host(), request.path)
+				callback_url = appendArgs(callback_root, { 'process': '1' })
+				redirect_url = openid_request.redirectURL(callback_root, callback_url, immediate=immediate)
+	else:
+		logger.error("Neither a process nor openid_identifier requested")
+
+	logger.debug("redirecting to: %s" % redirect_url)
+	return HttpResponseRedirect(redirect_url)

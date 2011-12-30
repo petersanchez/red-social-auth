@@ -3,7 +3,7 @@ import datetime
 from django.conf import settings
 from django.db import models
 
-PROVIDERS = getattr(settings, 'SOCIAL_AUTH_PROVIDERS', ('facebook', 'twitter', 'google'))
+PROVIDERS = getattr(settings, 'SOCIAL_AUTH_PROVIDERS', ('facebook', 'twitter', 'google', 'openid'))
 PROVIDER_CHOICES = [(x,x) for x in PROVIDERS]
 
 class IdentityProvider(models.Model):
@@ -83,3 +83,23 @@ class SocialUser(models.Model):
 			identity.save()
 		return user
 
+
+class Openid_Nonce(models.Model):
+	server_url = models.CharField(max_length=255)
+	timestamp = models.IntegerField()
+	salt = models.CharField(max_length=40)
+
+	def __unicode__(self):
+		return u"Nonce: %s for %s" % (self.salt, self.server_url)
+
+
+class Openid_Association(models.Model):
+	server_url = models.TextField(max_length=2047)
+	handle = models.CharField(max_length=255)
+	secret = models.TextField(max_length=255) # Stored base64 encoded
+	issued = models.IntegerField()
+	lifetime = models.IntegerField()
+	assoc_type = models.TextField(max_length=64)
+
+	def __unicode__(self):
+		return u"Association: %s, %s" % (self.server_url, self.handle)
