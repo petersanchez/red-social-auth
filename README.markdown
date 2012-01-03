@@ -33,6 +33,7 @@ This app is very easy to use.  Your login urls are:
 
     /auth/facebook/
     /auth/twitter/
+    /auth/openid/?openid_identifier=openid_endpoint.example.com
 
 The user will go to these urls, be directed through the oath protocol, and
 will return to the home page.  To log out they need to visit:
