@@ -406,18 +406,18 @@ def openid(request):
 		redirect_url = request.session['next']
 		del request.session['next']
 
-	openid_url = request.GET.get('openid_identifier')
-	process = request.GET.get('process')
-	immediate = 'immediate' in request.GET
-	use_sreg = True #'use_sreg' in request.GET
-	use_pape = 'use_pape' in request.GET
+	openid_url = request.REQUEST.get('openid_identifier')
+	id_response = request.REQUEST.get('openid.mode') == 'id_res'
+	immediate = 'immediate' in request.REQUEST
+	use_sreg = True #'use_sreg' in request.REQUEST
+	use_pape = 'use_pape' in request.REQUEST
 	
 	store = SocialAuthStore()
 	openid_consumer = consumer.Consumer(request.session, store)
 	
-	if process:
+	if id_response:
 		url = '%s://%s%s' % (request.is_secure() and 'https' or 'http', request.get_host(), request.path)
-		info = openid_consumer.complete(request.GET, url)
+		info = openid_consumer.complete(request.REQUEST, url)
 		logger.debug("openid process request for: %s" % url)
 
 		sreg_resp = None
@@ -473,7 +473,7 @@ def openid(request):
 					openid_request.addExtension(pape.Request([pape.AUTH_PHISHING_RESISTANT]))
 
 				callback_root = '%s://%s%s' % (request.is_secure() and 'https' or 'http', request.get_host(), request.path)
-				callback_url = appendArgs(callback_root, { 'process': '1' })
+				callback_url = appendArgs(callback_root, { })
 				redirect_url = openid_request.redirectURL(callback_root, callback_url, immediate=immediate)
 	else:
 		logger.error("Neither a process nor openid_identifier requested")

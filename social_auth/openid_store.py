@@ -54,7 +54,7 @@ class SocialAuthStore(interface.OpenIDStore):
 		return associations[-1][1]
 
 	def removeAssociation(self, server_url, handle):
-		assocs = list(Association.objects.filter(
+		assocs = list(Openid_Association.objects.filter(
 		        server_url = server_url, handle = handle
 		))
 		assocs_exist = len(assocs) > 0
