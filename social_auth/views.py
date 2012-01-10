@@ -1,4 +1,4 @@
-import json, logging, re, urllib, urllib2
+import json, logging, re, urllib, urllib2, urlparse
 
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
@@ -14,7 +14,8 @@ from social_auth.oauth2 import VerifiedHTTPSConnection
 from social_auth.openid_store import SocialAuthStore
 
 from openid.consumer import consumer
-from openid.extensions import pape, sreg
+from openid.consumer.discover import OpenIDServiceEndpoint, normalizeURL
+from openid.extensions import pape, sreg, ax
 from openid.oidutil import appendArgs
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ TWITTER_API_KEY     = getattr(settings, 'TWITTER_API_KEY', None)
 TWITTER_API_SECRET  = getattr(settings, 'TWITTER_API_SECRET', None)
 GOOGLE_API_SECRET = getattr(settings, 'GOOGLE_API_SECRET', None)
 GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
+OPENID_YADIS_OVERRIDES = getattr(settings, 'OPENID_YADIS_OVERRIDES', None)
 
 @never_cache
 def logout(request):
@@ -395,6 +397,14 @@ def test(request,u_id):
 	return HttpResponseRedirect(redirect_url)
 
 
+AX_URLS = {
+        'email': 'http://axschema.org/contact/email',
+        'name': 'http://axschema.org/namePerson',
+        'nickname': 'http://axschema.org/namePerson/friendly',
+        'firstname': 'http://axschema.org/namePerson/first',
+        'lastname': 'http://axschema.org/namePerson/last',
+        }
+
 @never_cache
 def openid(request):
 
@@ -409,8 +419,9 @@ def openid(request):
 	openid_url = request.REQUEST.get('openid_identifier')
 	id_response = request.REQUEST.get('openid.mode') == 'id_res'
 	immediate = 'immediate' in request.REQUEST
-	use_sreg = True #'use_sreg' in request.REQUEST
-	use_pape = 'use_pape' in request.REQUEST
+	# future hooks for making these optional
+	use_sreg = True
+	use_ax = True
 	
 	store = SocialAuthStore()
 	openid_consumer = consumer.Consumer(request.session, store)
@@ -420,8 +431,6 @@ def openid(request):
 		info = openid_consumer.complete(request.REQUEST, url)
 		logger.debug("openid process request for: %s" % url)
 
-		sreg_resp = None
-		pape_resp = None
 		user_identifier = info.getDisplayIdentifier()
 
 		if info.status == consumer.FAILURE and user_identifier:
@@ -429,16 +438,25 @@ def openid(request):
 		elif info.status == consumer.SUCCESS:
 			logger.debug("You have successfully verified %s as your identity." % user_identifier)
 			sreg_resp = sreg.SRegResponse.fromSuccessResponse(info)
-			pape_resp = pape.Response.fromSuccessResponse(info)
+			ax_resp = ax.FetchResponse.fromSuccessResponse(info)
 			name = info.identity_url
-			if sreg_resp and 'nickname' in sreg_resp.data:
-				name = sreg_resp.data['nickname']
+			data = {}
+			if ax_resp:
+				if AX_URLS['nickname'] in ax_resp.data:
+					name = ax_resp.data[AX_URLS['nickname']][0]
+				for field, url in AX_URLS.items():
+					if url in ax_resp.data:
+						data[field] = ax_resp.data[url][0]
+			elif sreg_resp:
+				if 'nickname' in sreg_resp.data:
+					name = sreg_resp.data['nickname']
+				data = sreg_resp.data
 			user_info = {
 		                'token'            : '',
 		                'external_user_id' : info.identity_url,
 		                'name'             : name,
 		                'image_url'        : '',
-		                'data'             : '',
+		                'data'             : data,
 		        }
 			assoc = store.getAssociation(info.endpoint.server_url)
 			if not assoc:
@@ -458,7 +476,12 @@ def openid(request):
 	elif openid_url:
 		try:
 			logger.debug("openid request for: %s" % openid_url)
-			openid_request = openid_consumer.begin(openid_url)
+			xrds = OPENID_YADIS_OVERRIDES and OPENID_YADIS_OVERRIDES.get(openid_url, None)
+			if xrds:
+				openid_services = OpenIDServiceEndpoint.fromXRDS(openid_url, xrds)				
+				openid_request = openid_consumer.beginWithoutDiscovery(openid_services[0])
+			else:
+				openid_request = openid_consumer.begin(openid_url)
 		except consumer.DiscoveryFailure, e:
 			logger.error("Error in discovery: %s" % str(e[0]))
 			return HttpResponseRedirect(redirect_url)
@@ -468,9 +491,12 @@ def openid(request):
 				return HttpResponseRedirect(redirect_url)
 			else:
 				if use_sreg:
-					openid_request.addExtension(sreg.SRegRequest(required=[], optional=['nickname']))
-				if use_pape:
-					openid_request.addExtension(pape.Request([pape.AUTH_PHISHING_RESISTANT]))
+					openid_request.addExtension(sreg.SRegRequest(required=[], optional=['email','nickname']))
+				if use_ax:
+					ax_request = ax.FetchRequest()
+					for ax_url in AX_URLS.values():
+						ax_request.add(ax.AttrInfo(ax_url, required=False))
+					openid_request.addExtension(ax_request)
 
 				callback_root = '%s://%s%s' % (request.is_secure() and 'https' or 'http', request.get_host(), request.path)
 				callback_url = appendArgs(callback_root, { })

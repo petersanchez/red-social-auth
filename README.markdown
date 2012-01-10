@@ -17,14 +17,36 @@ Maintainer: Peter Volpe at FF0000
 
         SOCIAL_AUTH_URL_TIMEOUT = 15    # Defaults to 15 seconds
         SOCIAL_AUTH_DEBUG       = False # Defaults to False
+        
+3. For openid sites that don't provide endpoint discovery yadis, you
+can supply this on a per site basis via the OPENID_YADIS_OVERRIDES
+settings value, e.g.,
 
-3. Next add 'social_auth' to your INSTALLED_APPS in your settings.py file.
+        OPENID_YADIS_OVERRIDES =  {
+                'https://accounts.autodesk.com/SignIn': 
+                '''<?xml version="1.0" encoding="UTF-8"?>
+                <xrds:XRDS
+                    xmlns:xrds="xri://$xrds"
+                    xmlns="xri://$xrd*($v*2.0)">
+                  <XRD>
+                
+                    <Service priority="0">
+                      <Type>http://specs.openid.net/auth/2.0/server</Type>
+                      <Type>http://openid.net/sreg/1.0</Type>
+                      <URI priority="0">https://accounts.autodesk.com/SignIn</URI>
+                    </Service>
+                
+                  </XRD>
+                </xrds:XRDS>''',
+                }
 
-4. Add the following line to your urls.py files:
+4. Next add 'social_auth' to your INSTALLED_APPS in your settings.py file.
+
+5. Add the following line to your urls.py files:
 
         (r'^auth/', include('social_auth.urls')),
 
-5. Run 'python manage.py syncdb' on your project and you're done!
+6. Run 'python manage.py syncdb' on your project and you're done!
 
 
 ## Usage
@@ -33,7 +55,11 @@ This app is very easy to use.  Your login urls are:
 
     /auth/facebook/
     /auth/twitter/
-    /auth/openid/?openid_identifier=openid_endpoint.example.com
+    /auth/openid/?openid_identifier=http%3A%2F%2openid_endpoint.example.com
+    /auth/openid/?openid_identifier=https%3A%2F%2openid_endpoint.example.com
+    
+NOTE: For openid https sites it is required to add the CA pem for that site
+to the social_auth/cacerts.txt file.
 
 The user will go to these urls, be directed through the oath protocol, and
 will return to the home page.  To log out they need to visit:
