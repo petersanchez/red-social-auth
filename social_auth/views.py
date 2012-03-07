@@ -257,6 +257,10 @@ def twitter(request):
 		redirect_url = request.session['next']
 		del request.session['next']
 
+	if 'denied' in request.GET:
+		# user has denied us permission to access their twitter account. redirect!
+		return HttpResponseRedirect(redirect_url)
+
 	if 'user' in request.session:
 		user = request.session['user']
 		identity = user.get_identity('twitter')
