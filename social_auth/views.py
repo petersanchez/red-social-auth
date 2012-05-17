@@ -6,9 +6,9 @@ import logging
 import urllib2
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.cache import never_cache
-from django.http import HttpResponse, HttpResponseRedirect
 
 from social_auth import oauth2
 from social_auth import https_connection
@@ -36,7 +36,7 @@ def logout(request):
         del request.session['next']
 
     request.session.flush()
-    return HttpResponseRedirect(redirect_url)
+    return redirect(redirect_url)
 
 
 @never_cache
@@ -149,7 +149,7 @@ def facebook(request):
                 'external_user_id': identity.external_user_id,
             }
             request.session['user'] = user
-            return HttpResponseRedirect(redirect_url)
+            return redirect(redirect_url)
     
     # TODO: Add a way to manage error responses
     # error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
@@ -159,7 +159,7 @@ def facebook(request):
             request.GET['error_reason'],
             ' '.join(request.GET['error_description'].split('+'))
         ))
-        return HttpResponseRedirect(redirect_url)
+        return redirect(redirect_url)
 
     if 'code' in request.GET:
         values['code'] = request.GET.get('code')
@@ -205,10 +205,10 @@ def facebook(request):
                     'external_user_id': user_info['external_user_id'],
                 }
                 request.session['user'] = s_user
-        return HttpResponseRedirect(redirect_url) 
+        return redirect(redirect_url) 
 
     redirect_url = "%s?%s" % (authorize_url, urllib.urlencode(values))
-    return HttpResponseRedirect(redirect_url)
+    return redirect(redirect_url)
 
 
 # Twitter
@@ -240,7 +240,7 @@ def twitter(request):
                 'external_user_id': identity.external_user_id,
             }
             request.session['user'] = user
-            return HttpResponseRedirect(redirect_url)
+            return redirect(redirect_url)
 
     if 'oauth_verifier' in request.GET:
         auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
@@ -285,7 +285,7 @@ def twitter(request):
                 logging.error('Error! Failed to get twitter request token.')
                 logging.error(e)
                 
-        return HttpResponseRedirect(redirect_url) 
+        return redirect(redirect_url) 
 
     # Authenticate with Twitter and get redirect_url
     callback_url = request.build_absolute_uri()
@@ -301,7 +301,7 @@ def twitter(request):
         logging.error('Error! Failed to get twitter request token.')
         logging.error(e)
 
-    return HttpResponseRedirect(redirect_url)
+    return redirect(redirect_url)
 
 
 @never_cache
@@ -324,7 +324,7 @@ def google(request):
                 'external_user_id': identity.external_user_id,
             }
             request.session['user'] = user
-            return HttpResponseRedirect(redirect_url)
+            return redirect(redirect_url)
 
     # Don't use build_absolute_uri so we can drop GET
     callback_url = '%s://%s%s' % (
@@ -338,7 +338,7 @@ def google(request):
             request.GET.get('error_reason'),
             ' '.join(request.GET.get('error_description', '').split('+'))
         ))
-        return HttpResponseRedirect(redirect_url)
+        return redirect(redirect_url)
     elif 'code' in request.GET:
         try:
             o = oauth2.GooglePlus.create_from_authorization_code(
@@ -374,7 +374,7 @@ def google(request):
                 pass
             logging.error(e)
 
-        return HttpResponseRedirect(redirect_url)
+        return redirect(redirect_url)
 
     # Authenticate with Google and get redirect_url
     redirect_url = oauth2.OAuth2Handler.get_auth_url(
@@ -383,7 +383,7 @@ def google(request):
         callback_url,
         scopes=('https://www.googleapis.com/auth/plus.me',),
     )
-    return HttpResponseRedirect(redirect_url)
+    return redirect(redirect_url)
 
 
 @never_cache
@@ -423,4 +423,4 @@ def test(request,u_id):
                 setattr(user, provider, info)
         request.session['user'] = user
 
-    return HttpResponseRedirect(redirect_url)
+    return redirect(redirect_url)
