@@ -97,9 +97,7 @@ def _get_access_token(request, provider):
     if '%s_access_token' % provider in request.session:
         return request.session.get('%s_access_token' % provider)
 
-    # XXX Why does this return an HttpResponse? 
-    # Come back and fix this too. ugh.
-    return redirect('auth_%s' % provider)
+    return (None, None)  # Compat with urlencode and twitter token
 
 
 # Facebook
