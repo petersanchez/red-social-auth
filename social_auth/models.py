@@ -83,9 +83,7 @@ class SocialUser(models.Model):
 
             if user_needs_save:
                 user.save()
-        except:
-            # Really? Global exception? Jeez.
-            # XXX Come back and fix this!
+        except IdentityProvider.DoesNotExist:  # MultipleObjectsReturned ?
             if not user:
                 user = SocialUser(
                     username=info['name'],
