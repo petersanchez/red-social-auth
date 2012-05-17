@@ -7,6 +7,7 @@ import socket
 import logging
 from https_connection import VerifiedHTTPSConnection
 
+
 class RequestError(Exception):
     def __init__(self, dict):
         self.status = 0
@@ -14,10 +15,13 @@ class RequestError(Exception):
             self.status = dict.get('status')
         super(RequestError, self).__init__(dict)
 
+
 class RanOutOfTries(Exception):
     pass
 
+
 logger = logging.getLogger(__name__)
+
 
 class OAuth2Handler(object):
     TOKEN_DOMAIN = 'accounts.google.com'
@@ -25,7 +29,8 @@ class OAuth2Handler(object):
     TOKEN_URL = "/o/oauth2/token"
 
     @classmethod
-    def get_auth_url(klass, client_id, client_secret, redirect_uri, scopes=[], offline=False):
+    def get_auth_url(klass, client_id, client_secret, 
+                     redirect_uri, scopes=[], offline=False):
         scope_string = ' '.join(scopes)
 
         params = {
@@ -42,7 +47,8 @@ class OAuth2Handler(object):
         return url
 
     @classmethod
-    def create_from_authorization_code(klass, authorization_code, client_id, client_secret, redirect_uri):
+    def create_from_authorization_code(klass, authorization_code, client_id,
+                                       client_secret, redirect_uri):
 
         headers = {"Content-type": "application/x-www-form-urlencoded"}
         params = urllib.urlencode({
@@ -131,7 +137,8 @@ class OAuth2Handler(object):
 
         self._access_token = val
 
-    def request_retry(self, method, url, body=None, headers={}, expected_resp=200, num_retries=10):
+    def request_retry(self, method, url, body=None, headers={},
+                      expected_resp=200, num_retries=10):
 
         num_retries = int(num_retries)
         if num_retries < 0:
@@ -142,7 +149,13 @@ class OAuth2Handler(object):
         while socket_retries > 0 and mtries > 0:
             try:
                 try:
-                    return self.request(method, url, body, headers, expected_resp)
+                    return self.request(
+                        method,
+                        url,
+                        body,
+                        headers,
+                        expected_resp,
+                    )
                 except SystemExit:
                     raise
                 except RequestError, e:
@@ -151,7 +164,9 @@ class OAuth2Handler(object):
                     if e.status not in [500, 503]:
                         raise e
 
-                logger.debug("Got %s from google. Retrying in %s" % (e.status, mdelay))
+                logger.debug(
+                    "Got %s from google. Retrying in %s" % (e.status, mdelay)
+                )
                 mtries -= 1
                 time.sleep(mdelay)
                 mdelay *= 2
@@ -169,7 +184,8 @@ class OAuth2Handler(object):
 
         raise RanOutOfTries('Ran out of tries. %s' % e)
 
-    def request(self, method, url, body=None, headers={}, expected_resp=200, allow_new_access_token=True):
+    def request(self, method, url, body=None, headers={},
+                expected_resp=200, allow_new_access_token=True):
         if not headers:
             headers = {}
 
@@ -181,7 +197,14 @@ class OAuth2Handler(object):
         response = conn.getresponse()
         if response.status == 401 and allow_new_access_token:
             self.update_access_token()
-            return self.request(method, url, body, headers, expected_resp, False)
+            return self.request(
+                method,
+                url,
+                body,
+                headers,
+                expected_resp,
+                False,
+            )
 
         try:
             data = response.read()
@@ -197,6 +220,7 @@ class OAuth2Handler(object):
                 raise RequestError(dict)
         finally:
             conn.close()
+
 
 class GooglePlus(OAuth2Handler):
     PEOPLE_URL = '/plus/v1/people/%s'

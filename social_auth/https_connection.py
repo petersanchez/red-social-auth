@@ -1,11 +1,15 @@
-import httplib
-import socket
-import ssl
 import os
+import ssl
+import socket
+import httplib
 import urllib2
 
+
 class VerifiedHTTPSConnection(httplib.HTTPSConnection):
-    path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'cacerts.txt'))
+    path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__),
+        'cacerts.txt'),
+    )
 
     def connect(self):
         # overrides the version in httplib so that we do
@@ -23,12 +27,13 @@ class VerifiedHTTPSConnection(httplib.HTTPSConnection):
                                     ca_certs=self.path)
 
 class VerifiedHTTPSHandler(urllib2.HTTPSHandler):
-	def __init__(self, connection_class = VerifiedHTTPSConnection):
-		self.specialized_conn_class = connection_class
-		urllib2.HTTPSHandler.__init__(self)
+    def __init__(self, connection_class = VerifiedHTTPSConnection):
+        self.specialized_conn_class = connection_class
+        urllib2.HTTPSHandler.__init__(self)
 
-	def https_open(self, req):
-		return self.do_open(self.specialized_conn_class, req)
+    def https_open(self, req):
+        return self.do_open(self.specialized_conn_class, req)
+
 
 https_handler = VerifiedHTTPSHandler()
 url_opener = urllib2.build_opener(https_handler)
