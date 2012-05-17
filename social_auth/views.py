@@ -41,9 +41,11 @@ def logout(request, provider=None):
         user = request.session.get('user', None)
         if user is not None and hasattr(user, provider):
             delattr(user, provider)
-            request.session['user'] = user
-            request.session.modified = True  # Just to be sure
-            session_flush = False
+            if any([hasattr(user, x) for x in PROVIDERS]):
+                # Reset user if logged into other services.
+                request.session['user'] = user
+                request.session.modified = True  # Just to be sure
+                session_flush = False
 
     if session_flush:
         request.session.flush()
