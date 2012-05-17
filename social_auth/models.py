@@ -49,7 +49,7 @@ class SocialUser(models.Model):
             individual provider views. ie, user.twitter or user.facebook.
         '''
         for provider in PROVIDERS:
-            if hasattr(self, provider);
+            if hasattr(self, provider):
                 return getattr(self, provider)
         return None
 
