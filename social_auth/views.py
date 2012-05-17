@@ -26,8 +26,10 @@ GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
 
 
 @never_cache
-def logout(request):
+def logout(request, provider=None):
     redirect_url = '/'
+    session_flush = True
+
     if 'next' in request.GET:
         redirect_url = request.GET['next']
         request.session['next'] = redirect_url
@@ -35,7 +37,17 @@ def logout(request):
         redirect_url = request.session['next']
         del request.session['next']
 
-    request.session.flush()
+    if provider is not None and provider in PROVIDERS:
+        user = request.session.get('user', None)
+        if user is not None and hasattr(user, provider):
+            delattr(user, provider)
+            request.session['user'] = user
+            request.session.modified = True  # Just to be sure
+            session_flush = False
+
+    if session_flush:
+        request.session.flush()
+
     return redirect(redirect_url)
 
 

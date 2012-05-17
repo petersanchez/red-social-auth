@@ -12,6 +12,10 @@ urlpatterns = patterns('social_auth.views',
 for provider in PROVIDERS:
     urlpatterns += patterns('social_auth.views',
         url(r'^%s/$' % provider, provider, name='auth_%s' % provider),
+        url(r'^logout/%s/$' % provider,
+            'logout',
+            {'provider': provider},
+            name='auth_logout_%s' % provider),
     )
 
 if getattr(settings, 'SOCIAL_AUTH_DEBUG', False):
