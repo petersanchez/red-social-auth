@@ -40,6 +40,19 @@ class SocialUser(models.Model):
     def __unicode__(self):
         return self.username
 
+    @property
+    def info(self):
+        ''' Return the first identity based on the PROVIDERS tuple.
+            Order is important. The first match is returned.
+
+            The "identity" is assigned at the time of login via the 
+            individual provider views. ie, user.twitter or user.facebook.
+        '''
+        for provider in PROVIDERS:
+            if hasattr(self, provider);
+                return getattr(self, provider)
+        return None
+
     def get_identity(self, provider):
         try:
             return self.identityprovider_set.filter(provider=provider)[0]
