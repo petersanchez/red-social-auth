@@ -198,7 +198,11 @@ def facebook(request):
                 }
 
                 user = request.session.get('user', None)
-                s_user = SocialUser.lookup('facebook', user, user_info)
+
+                # Append to existing user object to allow login to multiple 
+                # social services at once.
+                s_user = user if user is not None else \
+                    SocialUser.lookup('facebook', user, user_info)
                 s_user.facebook = {
                     'name': user_info['name'],
                     'image_url': user_info['image_url'],
@@ -270,10 +274,12 @@ def twitter(request):
                     'data': twitter_user.__dict__,
                 }
                 
-                user = None
-                if 'user' in request.session:
-                    user = request.session['user']
-                s_user = SocialUser.lookup('twitter', user, user_info)
+                user = request.session.get('user', None)
+
+                # Append to existing user object to allow login to multiple 
+                # social services at once.
+                s_user = user if user is not None else \
+                    SocialUser.lookup('twitter', user, user_info)
                 s_user.twitter = {
                     'name': user_info['name'],
                     'image_url': user_info['image_url'],
@@ -357,12 +363,16 @@ def google(request):
                 'data': profile,
             }
 
-            user = request.session.get('user',None)
-            s_user = SocialUser.lookup('google', user, user_info)
+            user = request.session.get('user', None)
+
+            # Append to existing user object to allow login to multiple 
+            # social services at once.
+            s_user = user if user is not None else \
+                SocialUser.lookup('google', user, user_info)
             s_user.google = {
-                'name'             : user_info['name'],
-                'image_url'        : user_info['image_url'],
-                'external_user_id' : user_info['external_user_id'],
+                'name': user_info['name'],
+                'image_url': user_info['image_url'],
+                'external_user_id': user_info['external_user_id'],
             }
             request.session['user'] = s_user
         except oauth2.RequestError, e:
