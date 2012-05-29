@@ -25,6 +25,27 @@ GOOGLE_API_SECRET = getattr(settings, 'GOOGLE_API_SECRET', None)
 GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
 
 
+def _get_new_user(old_user):
+    for provider in PROVIDERS:
+        if hasattr(old_user, provider):
+            data = getattr(old_user, provider)
+            try:
+                identity = IdentityProvider.objects.get(
+                    provider=provider,
+                    external_user_id=data['external_user_id'],
+                )
+                new_user = identity.user
+            except IdentityProvider.DoesNotExist:
+                continue
+
+            # Loop through again and assign properties
+            for _provider in PROVIDERS:
+                if hasattr(old_user, _provider):
+                    setattr(new_user, _provider, getattr(old_user, _provider))
+            return new_user
+    return old_user
+
+
 @never_cache
 def logout(request, provider=None):
     redirect_url = '/'
@@ -43,7 +64,7 @@ def logout(request, provider=None):
             delattr(user, provider)
             if any([hasattr(user, x) for x in PROVIDERS]):
                 # Reset user if logged into other services.
-                request.session['user'] = user
+                request.session['user'] = _get_new_user(user)
                 request.session.modified = True  # Just to be sure
                 session_flush = False
 
