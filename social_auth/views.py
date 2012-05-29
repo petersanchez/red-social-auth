@@ -236,8 +236,11 @@ def facebook(request):
 
                 # Append to existing user object to allow login to multiple 
                 # social services at once.
-                s_user = user if user is not None else \
-                    SocialUser.lookup('facebook', user, user_info)
+
+                # Call lookup first to update keys, etc.
+                s_user = SocialUser.lookup('facebook', user, user_info)
+                if user is not None:
+                    s_user = user
                 s_user.facebook = {
                     'name': user_info['name'],
                     'image_url': user_info['image_url'],
@@ -313,8 +316,9 @@ def twitter(request):
 
                 # Append to existing user object to allow login to multiple 
                 # social services at once.
-                s_user = user if user is not None else \
-                    SocialUser.lookup('twitter', user, user_info)
+                s_user = SocialUser.lookup('twitter', user, user_info)
+                if user is not None:
+                    s_user = user
                 s_user.twitter = {
                     'name': user_info['name'],
                     'image_url': user_info['image_url'],
@@ -402,8 +406,9 @@ def google(request):
 
             # Append to existing user object to allow login to multiple 
             # social services at once.
-            s_user = user if user is not None else \
-                SocialUser.lookup('google', user, user_info)
+            s_user = SocialUser.lookup('google', user, user_info)
+            if user is not None:
+                s_user = user
             s_user.google = {
                 'name': user_info['name'],
                 'image_url': user_info['image_url'],
