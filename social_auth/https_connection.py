@@ -15,7 +15,7 @@ class VerifiedHTTPSConnection(httplib.HTTPSConnection):
         # overrides the version in httplib so that we do
         #    certificate verification
         sock = socket.create_connection((self.host, self.port), self.timeout)
-        if hasttr(self, '_tunnel_host') and self._tunnel_host:
+        if hasattr(self, '_tunnel_host') and self._tunnel_host:
             self.sock = sock
             self._tunnel()
         # wrap the socket using verification with the root
