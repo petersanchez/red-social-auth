@@ -123,11 +123,11 @@ def submit(request):
 
 
 def _get_access_token(request, provider):
-    if 'user' in request.session:
-        user = request.session.get('user')
-        identity = user.get_identity(provider)
-        if identity:
-            return json.loads(identity.token)
+    #if 'user' in request.session:
+        #user = request.session.get('user')
+        #identity = user.get_identity(provider)
+        #if identity:
+            #return json.loads(identity.token)
     
     if '%s_access_token' % provider in request.session:
         return request.session.get('%s_access_token' % provider)
@@ -238,7 +238,7 @@ def facebook(request):
                 # social services at once.
 
                 # Call lookup first to update keys, etc.
-                s_user = SocialUser.lookup('facebook', user, user_info)
+                s_user = SocialUser.lookup('facebook', None, user_info)
                 if user is not None:
                     s_user = user
                 s_user.facebook = {
@@ -316,7 +316,7 @@ def twitter(request):
 
                 # Append to existing user object to allow login to multiple 
                 # social services at once.
-                s_user = SocialUser.lookup('twitter', user, user_info)
+                s_user = SocialUser.lookup('twitter', None, user_info)
                 if user is not None:
                     s_user = user
                 s_user.twitter = {
@@ -406,7 +406,7 @@ def google(request):
 
             # Append to existing user object to allow login to multiple 
             # social services at once.
-            s_user = SocialUser.lookup('google', user, user_info)
+            s_user = SocialUser.lookup('google', None, user_info)
             if user is not None:
                 s_user = user
             s_user.google = {
