@@ -23,6 +23,7 @@ TWITTER_API_KEY = getattr(settings, 'TWITTER_API_KEY', None)
 TWITTER_API_SECRET = getattr(settings, 'TWITTER_API_SECRET', None)
 GOOGLE_API_SECRET = getattr(settings, 'GOOGLE_API_SECRET', None)
 GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
+TRACKER_NAME = getattr(settings, 'SOCIAL_AUTH_TRACKER_NAME', '_logged_in')
 
 
 def _get_new_user(old_user):
@@ -184,6 +185,7 @@ def facebook(request):
                 'external_user_id': identity.external_user_id,
             }
             request.session['user'] = user
+            request.session[TRACKER_NAME] = 'facebook'
             return redirect(redirect_url)
     
     # TODO: Add a way to manage error responses
@@ -247,6 +249,7 @@ def facebook(request):
                     'external_user_id': user_info['external_user_id'],
                 }
                 request.session['user'] = s_user
+                request.session[TRACKER_NAME] = 'facebook'
         return redirect(redirect_url) 
 
     redirect_url = "%s?%s" % (authorize_url, urllib.urlencode(values))
@@ -282,6 +285,7 @@ def twitter(request):
                 'external_user_id': identity.external_user_id,
             }
             request.session['user'] = user
+            request.session[TRACKER_NAME] = 'twitter'
             return redirect(redirect_url)
 
     if 'oauth_verifier' in request.GET:
@@ -325,6 +329,7 @@ def twitter(request):
                     'external_user_id': user_info['external_user_id'],
                 }
                 request.session['user'] = s_user
+                request.session[TRACKER_NAME] = 'twitter'
 
             except tweepy.TweepError, e:
                 logging.error('Error! Failed to get twitter request token.')
@@ -369,6 +374,7 @@ def google(request):
                 'external_user_id': identity.external_user_id,
             }
             request.session['user'] = user
+            request.session[TRACKER_NAME] = 'google'
             return redirect(redirect_url)
 
     # Don't use build_absolute_uri so we can drop GET
@@ -415,6 +421,7 @@ def google(request):
                 'external_user_id': user_info['external_user_id'],
             }
             request.session['user'] = s_user
+            request.session[TRACKER_NAME] = 'google'
         except oauth2.RequestError, e:
             # 404 means user doesn't have google profile.
             # But the rest of this doesn't seem to have
