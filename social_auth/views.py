@@ -2,8 +2,11 @@ import re
 import json
 import tweepy
 import urllib
+import random
 import logging
 import urllib2
+import hashlib
+import datetime
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -24,6 +27,17 @@ TWITTER_API_SECRET = getattr(settings, 'TWITTER_API_SECRET', None)
 GOOGLE_API_SECRET = getattr(settings, 'GOOGLE_API_SECRET', None)
 GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
 TRACKER_NAME = getattr(settings, 'SOCIAL_AUTH_TRACKER_NAME', '_logged_in')
+
+
+def _build_cache_buster(user):
+    now = datetime.datetime.now()
+    hash_str = '%s-%i-%s' % (now, user.id, user.username)
+    digest = hashlib.sha1(hash_str).hexdigest()
+    return ''.join([random.choice(digest) for x in xrange(9)])
+
+
+def _build_cb_url(url, user):
+    return '%s?_cb=%s' % (url, _build_cache_buster(user))
 
 
 def _get_new_user(old_user):
@@ -186,7 +200,7 @@ def facebook(request):
             }
             request.session['user'] = user
             request.session[TRACKER_NAME] = 'facebook'
-            return redirect(redirect_url)
+            return redirect(_build_cb_url(redirect_url, user))
     
     # TODO: Add a way to manage error responses
     # error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
@@ -250,6 +264,7 @@ def facebook(request):
                 }
                 request.session['user'] = s_user
                 request.session[TRACKER_NAME] = 'facebook'
+                redirect_url = _build_cb_url(redirect_url, s_user)
         return redirect(redirect_url) 
 
     redirect_url = "%s?%s" % (authorize_url, urllib.urlencode(values))
@@ -286,7 +301,7 @@ def twitter(request):
             }
             request.session['user'] = user
             request.session[TRACKER_NAME] = 'twitter'
-            return redirect(redirect_url)
+            return redirect(_build_cb_url(redirect_url, user))
 
     if 'oauth_verifier' in request.GET:
         auth = tweepy.OAuthHandler(TWITTER_API_KEY, TWITTER_API_SECRET)
@@ -330,6 +345,7 @@ def twitter(request):
                 }
                 request.session['user'] = s_user
                 request.session[TRACKER_NAME] = 'twitter'
+                redirect_url = _build_cb_url(redirect_url, s_user)
 
             except tweepy.TweepError, e:
                 logging.error('Error! Failed to get twitter request token.')
@@ -375,7 +391,7 @@ def google(request):
             }
             request.session['user'] = user
             request.session[TRACKER_NAME] = 'google'
-            return redirect(redirect_url)
+            return redirect(_build_cb_url(redirect_url, user))
 
     # Don't use build_absolute_uri so we can drop GET
     callback_url = '%s://%s%s' % (
@@ -422,6 +438,7 @@ def google(request):
             }
             request.session['user'] = s_user
             request.session[TRACKER_NAME] = 'google'
+            redirect_url = _build_cb_url(redirect_url, s_user)
         except oauth2.RequestError, e:
             # 404 means user doesn't have google profile.
             # But the rest of this doesn't seem to have
