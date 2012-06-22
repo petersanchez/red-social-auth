@@ -90,7 +90,7 @@ class SocialUser(models.Model):
             if not user.username:
                 user.username = info['name']
                 user_needs_save = True
-            if not user.image_url:
+            if not user.image_url or user.image_url != info['image_url']:
                 user.image_url = info['image_url']
                 user_needs_save = True
 
