@@ -31,7 +31,7 @@ TRACKER_NAME = getattr(settings, 'SOCIAL_AUTH_TRACKER_NAME', '_logged_in')
 
 def _build_cache_buster(user):
     now = datetime.datetime.now()
-    hash_str = '%s-%i-%s' % (now, user.id, user.username)
+    hash_str = '%s-%i' % (now, user.id)
     digest = hashlib.sha1(hash_str).hexdigest()
     return ''.join([random.choice(digest) for x in xrange(9)])
 
