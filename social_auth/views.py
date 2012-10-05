@@ -251,9 +251,8 @@ def facebook(request):
                 ))
             else:
                 try:
-                    picture_info = json.loads(facebook_user['picture'])
-                    image_url = picture_info['data']['url']
-                except (KeyError, ValueError):
+                    image_url = facebook_user['picture']['data']['url']
+                except (KeyError):
                     image_url = silhouette_image_url
 
                 user_info = {
