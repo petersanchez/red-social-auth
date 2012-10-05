@@ -20,6 +20,7 @@ from social_auth.oauth2 import VerifiedHTTPSConnection
 from social_auth.models import SocialUser, IdentityProvider, PROVIDERS
 
 URL_TIMEOUT = getattr(settings, 'SOCIAL_AUTH_URL_TIMEOUT', 15)
+FACEBOOK_URL_RETRY = getattr(settings, 'FACEBOOK_URL_RETRY', 3)
 FACEBOOK_API_KEY = getattr(settings, 'FACEBOOK_API_KEY', None)
 FACEBOOK_API_SECRET = getattr(settings, 'FACEBOOK_API_SECRET', None)
 TWITTER_API_KEY = getattr(settings, 'TWITTER_API_KEY', None)
@@ -182,6 +183,8 @@ def facebook(request):
 
     access_url = "https://graph.facebook.com/oauth/access_token"
     authorize_url = "https://graph.facebook.com/oauth/authorize"
+    silhouette_image_url = \
+        "https://fbcdn-profile-a.akamaihd.net/static-ak/rsrc.php/v2/yo/r/UlIqmHJn-SK.gif"
     callback_url = request.build_absolute_uri()
     values = {
         'client_id': FACEBOOK_API_KEY,
@@ -216,8 +219,17 @@ def facebook(request):
         values['code'] = request.GET.get('code')
         values['client_secret'] = FACEBOOK_API_SECRET
         facebook_url = "%s?%s" % (access_url, urllib.urlencode(values))
-        result = urllib2.urlopen(facebook_url, None, URL_TIMEOUT).read()
-        access_token = re.findall('^access_token=([^&]*)', result)
+        
+        access_token = None
+        for attempt in range(0, FACEBOOK_URL_RETRY):
+            try:
+                result = urllib2.urlopen(facebook_url, None, URL_TIMEOUT).read()
+            except urllib2.HTTPError:
+                logging.error('Error connecting to facebook auth url. Retrying.')
+                continue
+            else:
+                access_token = re.findall('^access_token=([^&]*)', result)
+                break
 
         if len(access_token):
             access_token = access_token[0]
@@ -238,12 +250,18 @@ def facebook(request):
                     facebook_user['error']['message'],
                 ))
             else:
+                try:
+                    picture_info = json.loads(facebook_user['picture'])
+                    image_url = picture_info['data']['url']
+                except (KeyError, ValueError):
+                    image_url = silhouette_image_url
+
                 user_info = {
                     'token': \
                         json.dumps(request.session['facebook_access_token']),
                     'external_user_id': facebook_user['id'],
                     'name': facebook_user['name'],
-                    'image_url': facebook_user['picture'],
+                    'image_url': image_url,
                     'expires': expires,
                     'data': facebook_user,
                 }
