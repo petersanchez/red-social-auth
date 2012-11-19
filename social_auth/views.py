@@ -231,7 +231,7 @@ def facebook(request):
                 access_token = re.findall('^access_token=([^&]*)', result)
                 break
 
-        if len(access_token):
+        if access_token and len(access_token):
             access_token = access_token[0]
             expires = re.findall('.*?expires=(\d+)', result)
             expires = expires[0] if len(expires) else 9999
