@@ -144,7 +144,7 @@ def _get_access_token(request, provider):
         #identity = user.get_identity(provider)
         #if identity:
             #return json.loads(identity.token)
-    
+
     if '%s_access_token' % provider in request.session:
         return request.session.get('%s_access_token' % provider)
 
@@ -158,7 +158,7 @@ def call_facebook_api(request, method=None, **kwargs):
     graph_dict.update(kwargs)
     data = urllib.urlencode(graph_dict)
     url = 'https://graph.facebook.com/%s' % method
-    if method == 'me': 
+    if method == 'me':
         url += '?%s' % data
         data = None
     try:
@@ -189,9 +189,9 @@ def facebook(request):
     values = {
         'client_id': FACEBOOK_API_KEY,
         'redirect_uri': 'http://%s%s' % (request.get_host(), request.path),
-        'scope': 'publish_stream',
+        'scope': 'publisher_actions',
     }
-    
+
     if 'user' in request.session:
         user = request.session['user']
         identity = user.get_identity('facebook')
@@ -204,7 +204,7 @@ def facebook(request):
             request.session['user'] = user
             request.session[TRACKER_NAME] = 'facebook'
             return redirect(_build_cb_url(redirect_url, user))
-    
+
     # TODO: Add a way to manage error responses
     # error_reason=user_denied&error=access_denied&error_description=The+user+denied+your+request
     if 'error' in request.GET:
@@ -219,7 +219,7 @@ def facebook(request):
         values['code'] = request.GET.get('code')
         values['client_secret'] = FACEBOOK_API_SECRET
         facebook_url = "%s?%s" % (access_url, urllib.urlencode(values))
-        
+
         access_token = None
         for attempt in range(0, FACEBOOK_URL_RETRY):
             try:
@@ -236,13 +236,13 @@ def facebook(request):
             expires = re.findall('.*?expires=(\d+)', result)
             expires = expires[0] if len(expires) else 9999
             request.session['facebook_access_token'] = access_token
-            
+
             facebook_user = call_facebook_api(
                 request,
                 'me',
                 **{'fields': 'id,name,picture'}
             )
-            
+
             # Error handling
             if 'error' in facebook_user:
                 logging.error('Error! %s: %s' % (
@@ -267,7 +267,7 @@ def facebook(request):
 
                 user = request.session.get('user', None)
 
-                # Append to existing user object to allow login to multiple 
+                # Append to existing user object to allow login to multiple
                 # social services at once.
 
                 # Call lookup first to update keys, etc.
@@ -282,7 +282,7 @@ def facebook(request):
                 request.session['user'] = s_user
                 request.session[TRACKER_NAME] = 'facebook'
                 redirect_url = _build_cb_url(redirect_url, s_user)
-        return redirect(redirect_url) 
+        return redirect(redirect_url)
 
     redirect_url = "%s?%s" % (authorize_url, urllib.urlencode(values))
     return redirect(redirect_url)
@@ -337,7 +337,7 @@ def twitter(request):
                     access_token.key,
                     access_token.secret,
                 )
-                
+
                 twitter_user = get_twitter_api(request).me()
                 user_info = {
                     'token': \
@@ -347,10 +347,10 @@ def twitter(request):
                     'image_url': twitter_user.profile_image_url,
                     'data': twitter_user.__dict__,
                 }
-                
+
                 user = request.session.get('user', None)
 
-                # Append to existing user object to allow login to multiple 
+                # Append to existing user object to allow login to multiple
                 # social services at once.
                 s_user = SocialUser.lookup('twitter', None, user_info)
                 if user is not None:
@@ -367,8 +367,8 @@ def twitter(request):
             except tweepy.TweepError, e:
                 logging.error('Error! Failed to get twitter request token.')
                 logging.error(e)
-                
-        return redirect(redirect_url) 
+
+        return redirect(redirect_url)
 
     # Authenticate with Twitter and get redirect_url
     callback_url = request.build_absolute_uri()
@@ -443,7 +443,7 @@ def google(request):
 
             user = request.session.get('user', None)
 
-            # Append to existing user object to allow login to multiple 
+            # Append to existing user object to allow login to multiple
             # social services at once.
             s_user = SocialUser.lookup('google', None, user_info)
             if user is not None:
@@ -502,7 +502,7 @@ def test(request,u_id):
             for provider in PROVIDERS:
                 identity = IdentityProvider(
                     user=user,
-                    provider=provider, 
+                    provider=provider,
                     token=json.dumps(['%s-%s' % (provider, u_id)]),
                     external_user_id=info['external_user_id'],
                     name=info['name'],
