@@ -189,7 +189,7 @@ def facebook(request):
     values = {
         'client_id': FACEBOOK_API_KEY,
         'redirect_uri': 'http://%s%s' % (request.get_host(), request.path),
-        'scope': 'publisher_actions',
+        'scope': 'publish_stream',
     }
 
     if 'user' in request.session:
